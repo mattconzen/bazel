@@ -54,7 +54,8 @@ public final class SkyframeEvictionTest {
 
   private enum Backend {
     NATIVE,
-    LAYERED_HEAP
+    LAYERED_HEAP,
+    MAPPED
   }
 
   @TestParameter private Backend backend;
@@ -219,7 +220,14 @@ public final class SkyframeEvictionTest {
     assertThat(result.hasError()).isFalse();
     if (evaluator.getInMemoryGraph() instanceof LayeredInMemoryGraph graph
         && graph.baselineGeneration() == null) {
-      graph.freezeAtQuiescentBoundary();
+      if (backend == Backend.MAPPED) {
+        graph.freezeMappedAtQuiescentBoundary(
+            java.nio.file.Files.createTempDirectory(
+                java.nio.file.Path.of(System.getenv("TEST_TMPDIR")), "arena-"),
+            "fda97de2b3b179ecdfa8af455fffde8d0b6b6422");
+      } else {
+        graph.freezeAtQuiescentBoundary();
+      }
     }
     for (LayerKey key : topLevelKeys) {
       LayerValue value = result.get(key);

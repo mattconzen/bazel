@@ -94,7 +94,11 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
     // Construct the complete delegate before publishing. Failure leaves frozen state intact.
     storage = new Mutable(restored);
     counters.record(
-        reason, record.directDeps().dependencyCount() + (long) record.reverseDeps().size());
+        reason,
+        record.directDeps().dependencyCount() + (long) record.reverseDeps().size(),
+        record.directDeps() instanceof MappedDoneDeps mapped
+            ? mapped.encodedBytes() + 4 + 4L * record.reverseDeps().size()
+            : 0);
     return restored;
   }
 

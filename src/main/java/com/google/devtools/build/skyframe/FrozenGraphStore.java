@@ -15,13 +15,26 @@ package com.google.devtools.build.skyframe;
 
 import java.util.UUID;
 
-/** A heap-backed, snapshot-coupled baseline. It is not a portable graph cache. */
-final class FrozenGraphStore {
-  private final UUID generation = UUID.randomUUID();
+/** Generation lifetime metadata for snapshot-coupled completed records. Not a portable cache. */
+class FrozenGraphStore {
+  private final UUID generation;
   private final int size;
 
   FrozenGraphStore(int size) {
+    this(size, UUID.randomUUID());
+  }
+
+  FrozenGraphStore(int size, UUID generation) {
     this.size = size;
+    this.generation = generation;
+  }
+
+  long mappedBytes() {
+    return 0;
+  }
+
+  java.nio.file.Path backingFile() {
+    return null;
   }
 
   UUID generation() {

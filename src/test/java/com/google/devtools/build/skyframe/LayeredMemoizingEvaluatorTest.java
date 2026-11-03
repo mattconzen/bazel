@@ -25,7 +25,7 @@ import org.junit.runners.JUnit4;
 
 /** Runs the evaluator semantics with a frozen baseline after its first successful evaluation. */
 @RunWith(JUnit4.class)
-public final class LayeredMemoizingEvaluatorTest extends InMemoryMemoizingEvaluatorTest {
+public class LayeredMemoizingEvaluatorTest extends InMemoryMemoizingEvaluatorTest {
   private LayeredInMemoryGraph layeredGraph;
 
   @Override
@@ -37,11 +37,15 @@ public final class LayeredMemoizingEvaluatorTest extends InMemoryMemoizingEvalua
     };
   }
 
+  protected void freeze(LayeredInMemoryGraph graph) throws InterruptedException {
+    graph.freezeAtQuiescentBoundary();
+  }
+
   @Override
   protected void afterEvaluation(EvaluationResult<?> result, EvaluationContext context)
       throws InterruptedException {
     if (result != null && !result.hasError() && layeredGraph.baselineGeneration() == null) {
-      layeredGraph.freezeAtQuiescentBoundary();
+      freeze(layeredGraph);
     }
   }
 
