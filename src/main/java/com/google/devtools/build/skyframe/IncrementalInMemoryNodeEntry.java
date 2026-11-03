@@ -87,6 +87,17 @@ public class IncrementalInMemoryNodeEntry extends AbstractInMemoryNodeEntry<Dirt
     super(key);
   }
 
+  /** Reconstructs exactly one completed state, before a stable handle publishes the delegate. */
+  static IncrementalInMemoryNodeEntry restoreCompleted(SkyKey key, FrozenNodeRecord record) {
+    IncrementalInMemoryNodeEntry result = new IncrementalInMemoryNodeEntry(key);
+    result.directDeps = record.directDeps().materializeForEvaluation().compress();
+    ReverseDepsUtility.writeReverseDeps(result, record.reverseDeps());
+    // Publish version before value, matching setValue's ordering contract.
+    result.version = record.version();
+    result.value = record.wrappedValue();
+    return result;
+  }
+
   /**
    * Replaces the SkyValue with a placeholder value indicating that it has been cleared.
    *
