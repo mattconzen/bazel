@@ -19,6 +19,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.devtools.build.lib.events.StoredEventHandler;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,16 +29,17 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import javax.annotation.Nullable;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 /**
  * The place where eventual tests for Skyframe eviction will live.
  *
- * <p>For now, since eviction is not implemented yet, it's just a fuzz test. Eventually, once
- * eviction is there, we'll add that to the mix of events that can happen.
+ * <p>For now, since eviction is not implemented yet, it is a seeded edit/delete fuzz test,
+ * including a frozen heap baseline. Eventually, once eviction is there, we'll add that to the mix
+ * of events that can happen.
  *
  * <p>We construct a Skyframe graph of depth {@code LAYERS} with {@code NODES_PER_LAYER} nodes per
  * layer. Each node has a randomly chosen dependency structure (see {@link #getBatches(LayerKey)})
@@ -46,8 +49,15 @@ import org.junit.runners.JUnit4;
  * incremented on each invalidation. The value of each node is a set that contains the union of the
  * sets in its direct deps.
  */
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public final class SkyframeEvictionTest {
+
+  private enum Backend {
+    NATIVE,
+    LAYERED_HEAP
+  }
+
+  @TestParameter private Backend backend;
 
   // Number of layers in the test Skyframe graph
   private static final int LAYERS = 50;
@@ -185,7 +195,10 @@ public final class SkyframeEvictionTest {
             EventFilter.FULL_STORAGE,
             new EmittedEventState(),
             /* keepEdges= */ true,
-            /* usePooledInterning= */ true);
+            /* usePooledInterning= */ true,
+            backend == Backend.NATIVE
+                ? InMemoryGraphFactory.DEFAULT
+                : LayeredInMemoryGraph.FACTORY);
     evaluationContext =
         EvaluationContext.newBuilder()
             .setKeepGoing(false)
@@ -194,11 +207,20 @@ public final class SkyframeEvictionTest {
             .build();
   }
 
+  @After
+  public void cleanup() {
+    evaluator.getInMemoryGraph().cleanupInterningPools();
+  }
+
   private void evaluateAndAssert() throws Exception {
     List<LayerKey> topLevelKeys = getTopLevelKeys();
     Map<LayerKey, ImmutableSortedSet<String>> expectedValues = computeExpectedValues();
     EvaluationResult<LayerValue> result = evaluator.evaluate(topLevelKeys, evaluationContext);
     assertThat(result.hasError()).isFalse();
+    if (evaluator.getInMemoryGraph() instanceof LayeredInMemoryGraph graph
+        && graph.baselineGeneration() == null) {
+      graph.freezeAtQuiescentBoundary();
+    }
     for (LayerKey key : topLevelKeys) {
       LayerValue value = result.get(key);
       assertThat(value).isNotNull();
@@ -223,6 +245,13 @@ public final class SkyframeEvictionTest {
         }
       }
       differencer.invalidate(keysToInvalidate);
+      if (iteration % 5 == 0) {
+        SkyKey deleted =
+            new LayerKey(
+                1 + invalidationRandom.nextInt(LAYERS),
+                invalidationRandom.nextInt(NODES_PER_LAYER));
+        evaluator.delete(deleted::equals);
+      }
       evaluateAndAssert();
     }
   }

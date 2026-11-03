@@ -39,7 +39,7 @@ public class IncrementalInMemoryNodeEntryTest extends InMemoryNodeEntryTest<IntV
   protected final IntVersion incrementalVersion = initialVersion.next();
 
   @Override
-  protected IncrementalInMemoryNodeEntry createEntry(SkyKey key) {
+  protected InMemoryNodeEntry createEntry(SkyKey key) {
     return new IncrementalInMemoryNodeEntry(key);
   }
 

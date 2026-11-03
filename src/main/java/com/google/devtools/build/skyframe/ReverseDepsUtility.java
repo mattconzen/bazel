@@ -377,7 +377,7 @@ abstract class ReverseDepsUtility {
   }
 
   /** Stores the given reverse deps, which must not contain duplicates. */
-  private static void writeReverseDeps(
+  static void writeReverseDeps(
       IncrementalInMemoryNodeEntry entry, Collection<SkyKey> reverseDeps) {
     if (!entry.keepsEdges() || reverseDeps.isEmpty()) {
       entry.setReverseDepsForReverseDepsUtil(ImmutableList.of());
