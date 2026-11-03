@@ -98,6 +98,7 @@ public class IncrementalInMemoryNodeEntry extends AbstractInMemoryNodeEntry<Dirt
    * <p>One appropriate use case is an optimization for Skycache primer builds (which are always
    * cold) that reduces peak heap by discarding unneeded values before serialization.
    */
+  @Override
   public void clearSkyValue() {
     Preconditions.checkState(isDone());
     if (toValue() instanceof PackageoidValue packageoidValue) {
@@ -425,8 +426,9 @@ public class IncrementalInMemoryNodeEntry extends AbstractInMemoryNodeEntry<Dirt
    * change pruning; otherwise returns {@code null}. The node may be kept iff every returned dep is
    * still present and was not changed more recently than {@link #lastEvaluatedVersion}.
    */
+  @Override
   @Nullable
-  final Iterable<SkyKey> lastBuildDepsIfChangePrunable() {
+  public final Iterable<SkyKey> lastBuildDepsIfChangePrunable() {
     var localDirtyBuildingState = dirtyBuildingState;
     if (localDirtyBuildingState == null
         || !localDirtyBuildingState.isIncremental()
@@ -442,6 +444,7 @@ public class IncrementalInMemoryNodeEntry extends AbstractInMemoryNodeEntry<Dirt
   }
 
   /** Returns the version at which this node was last evaluated; see {@link NodeVersion}. */
+  @Override
   public final Version lastEvaluatedVersion() {
     return version.lastEvaluated();
   }
@@ -515,12 +518,15 @@ public class IncrementalInMemoryNodeEntry extends AbstractInMemoryNodeEntry<Dirt
    * <p>Only safe once the graph no longer needs to be incrementally correct: by Skycache uploads
    * under {@code --nokeep_state_after_build}.
    */
+  @Override
   public final synchronized void clearDirectDeps() {
 
     checkState(isDone(), this);
     this.directDeps = GroupedDeps.EMPTY_COMPRESSED;
   }
+
   /** Flushes pending reverse dep operations, which potentially saves memory. */
+  @Override
   public final synchronized void consolidateReverseDeps() {
 
     checkState(isDone(), this);

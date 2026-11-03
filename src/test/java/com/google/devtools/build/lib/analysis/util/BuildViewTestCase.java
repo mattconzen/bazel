@@ -180,6 +180,7 @@ import com.google.devtools.build.lib.vfs.Path;
 import com.google.devtools.build.lib.vfs.PathFragment;
 import com.google.devtools.build.lib.vfs.Root;
 import com.google.devtools.build.lib.vfs.SyscallCache;
+import com.google.devtools.build.skyframe.InMemoryGraphFactory;
 import com.google.devtools.build.skyframe.InMemoryMemoizingEvaluator;
 import com.google.devtools.build.skyframe.SkyFunction;
 import com.google.devtools.build.skyframe.SkyFunctionName;
@@ -261,6 +262,11 @@ public abstract class BuildViewTestCase extends FoundationTestCase {
     skyframeExecutor.getEvaluator().cleanupInterningPools();
   }
 
+  /** Storage selection shared by initial construction and evaluator resets. */
+  protected InMemoryGraphFactory getGraphFactory() {
+    return InMemoryGraphFactory.DEFAULT;
+  }
+
   @Before
   public void initializeSkyframeExecutor() throws Exception {
     initializeSkyframeExecutor(/* doPackageLoadingChecks= */ true);
@@ -335,6 +341,7 @@ public abstract class BuildViewTestCase extends FoundationTestCase {
     }
     skyframeExecutor =
         SequencedSkyframeExecutor.newBazelSkyframeExecutorBuilder()
+            .setGraphFactory(getGraphFactory())
             .setPkgFactory(pkgFactory)
             .setFileSystem(fileSystem)
             .setDirectories(directories)

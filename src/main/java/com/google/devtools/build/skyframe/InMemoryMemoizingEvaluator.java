@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.google.devtools.build.skyframe;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -63,6 +64,29 @@ public final class InMemoryMemoizingEvaluator extends AbstractInMemoryMemoizingE
       EmittedEventState emittedEventState,
       boolean keepEdges,
       boolean usePooledInterning) {
+    this(
+        skyFunctions,
+        differencer,
+        progressReceiver,
+        graphInconsistencyReceiver,
+        eventFilter,
+        emittedEventState,
+        keepEdges,
+        usePooledInterning,
+        InMemoryGraphFactory.DEFAULT);
+  }
+
+  /** Constructs an evaluator using a fresh graph from the given factory. */
+  public InMemoryMemoizingEvaluator(
+      Map<SkyFunctionName, SkyFunction> skyFunctions,
+      Differencer differencer,
+      EvaluationProgressReceiver progressReceiver,
+      GraphInconsistencyReceiver graphInconsistencyReceiver,
+      EventFilter eventFilter,
+      EmittedEventState emittedEventState,
+      boolean keepEdges,
+      boolean usePooledInterning,
+      InMemoryGraphFactory graphFactory) {
     super(
         ImmutableMap.copyOf(skyFunctions),
         differencer,
@@ -72,10 +96,7 @@ public final class InMemoryMemoizingEvaluator extends AbstractInMemoryMemoizingE
         graphInconsistencyReceiver,
         keepEdges,
         Version.minimal());
-    this.graph =
-        keepEdges
-            ? InMemoryGraph.create(usePooledInterning)
-            : InMemoryGraph.createEdgeless(usePooledInterning);
+    this.graph = checkNotNull(graphFactory.create(keepEdges, usePooledInterning));
   }
 
   @Override

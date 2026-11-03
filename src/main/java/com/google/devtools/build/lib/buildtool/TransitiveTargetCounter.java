@@ -25,6 +25,7 @@ import com.google.devtools.build.lib.profiler.SilentCloseable;
 import com.google.devtools.build.lib.skyframe.ActionLookupValuesTraversal;
 import com.google.devtools.build.lib.skyframe.AspectKeyCreator.AspectBaseKey;
 import com.google.devtools.build.lib.skyframe.ConfiguredTargetKey;
+import com.google.devtools.build.skyframe.DoneDeps;
 import com.google.devtools.build.skyframe.InMemoryGraph;
 import com.google.devtools.build.skyframe.InMemoryNodeEntry;
 import com.google.devtools.build.skyframe.SkyKey;
@@ -174,21 +175,21 @@ final class TransitiveTargetCounter {
         // (entry.getValue() unwraps ErrorInfoValue to null), including cycle nodes whose retained
         // cycle edges would violate the DAG invariant of Kahn's algorithm. `keepsEdges()` is false
         // under --notrack_incremental_state (NonIncrementalInMemoryNodeEntry), where direct deps
-        // are discarded on completion and getCompressedDirectDepsForDoneEntry() throws.
+        // are discarded on completion and getDoneDeps() throws.
         if (value != null && entry.keepsEdges()) {
-          node.deps = visitCompressedDeps(parent, entry.getCompressedDirectDepsForDoneEntry());
+          node.deps = visitDeps(parent, entry.getDoneDeps());
         }
       }
     }
 
-    /**
-     * Visits the deps in a compressed {@code GroupedDeps}: either an {@code Object[]} of {@link
-     * SkyKey}s and {@code Integer} group markers, a single bare {@link SkyKey}, or an opaque empty
-     * marker.
-     */
-    private int[] visitCompressedDeps(CountedCompleter<?> parent, Object compressed) {
-      if (!(compressed instanceof Object[] depArray)) {
-        ActionLookupKey depKey = asRelevantKey(compressed);
+    /** Visits dependencies without depending on their heap or mapped representation. */
+    private int[] visitDeps(CountedCompleter<?> parent, DoneDeps doneDeps) {
+      int count = doneDeps.dependencyCount();
+      if (count == 0) {
+        return NO_DEPS;
+      }
+      if (count == 1) {
+        ActionLookupKey depKey = asRelevantKey(doneDeps.iterator().next());
         if (depKey == null) {
           return NO_DEPS;
         }
@@ -200,11 +201,11 @@ final class TransitiveTargetCounter {
       // reading dep.id faults the Node's cache line in alongside the hash-table lookup while the
       // out-of-order engine can overlap misses across iterations, whereas the atomic increments in
       // the second loop are full fences that would otherwise serialize them.
-      int maxDeps = depArray.length;
+      int maxDeps = count;
       Node[] depNodes = new Node[maxDeps];
       int[] deps = new int[maxDeps];
       int n = 0;
-      for (Object elem : depArray) {
+      for (SkyKey elem : doneDeps) {
         ActionLookupKey depKey = asRelevantKey(elem);
         if (depKey == null) {
           continue;

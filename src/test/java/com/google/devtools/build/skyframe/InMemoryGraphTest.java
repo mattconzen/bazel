@@ -36,9 +36,13 @@ public class InMemoryGraphTest extends GraphTest {
     return ((IntVersion) v).next();
   }
 
+  protected InMemoryGraphFactory graphFactory() {
+    return InMemoryGraphFactory.DEFAULT;
+  }
+
   @Override
   protected void makeGraph() {
-    graph = new InMemoryGraphImpl();
+    graph = graphFactory().create(/* keepEdges= */ true, /* usePooledInterning= */ true);
   }
 
   @Override

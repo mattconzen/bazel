@@ -69,7 +69,6 @@ import com.google.devtools.build.lib.skyframe.serialization.analysis.RemoteAnaly
 import com.google.devtools.build.lib.versioning.LongVersionGetter;
 import com.google.devtools.build.skyframe.InMemoryGraph;
 import com.google.devtools.build.skyframe.InMemoryNodeEntry;
-import com.google.devtools.build.skyframe.IncrementalInMemoryNodeEntry;
 import com.google.devtools.build.skyframe.SkyKey;
 import com.google.devtools.build.skyframe.SkyValue;
 import com.google.devtools.build.skyframe.Version;
@@ -990,8 +989,8 @@ final class SelectedEntrySerializer {
     try (var _ = Profiler.instance().profile("clearDirectDeps")) {
       graph.parallelForEach(
           node -> {
-            if (node instanceof IncrementalInMemoryNodeEntry entry && entry.isDone()) {
-              entry.clearDirectDeps();
+            if (node.keepsEdges() && node.isDone()) {
+              node.clearDirectDeps();
             }
           });
     }

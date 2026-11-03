@@ -93,6 +93,7 @@ import com.google.devtools.build.skyframe.EmittedEventState;
 import com.google.devtools.build.skyframe.EvaluationContext;
 import com.google.devtools.build.skyframe.EventFilter;
 import com.google.devtools.build.skyframe.GraphInconsistencyReceiver;
+import com.google.devtools.build.skyframe.InMemoryGraphFactory;
 import com.google.devtools.build.skyframe.InMemoryMemoizingEvaluator;
 import com.google.devtools.build.skyframe.Injectable;
 import com.google.devtools.build.skyframe.MemoizingEvaluator;
@@ -158,6 +159,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
   protected final DelegatingGraphInconsistencyReceiver inconsistencyReceiver =
       new DelegatingGraphInconsistencyReceiver(GraphInconsistencyReceiver.THROWING);
 
+  private final InMemoryGraphFactory graphFactory;
+
   protected SequencedSkyframeExecutor(
       Consumer<SkyframeExecutor> skyframeExecutorConsumerOnInit,
       PackageFactory pkgFactory,
@@ -180,7 +183,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       CompressionService compressionService,
       BugReporter bugReporter,
       boolean globUnderSingleDep,
-      Optional<DiffCheckNotificationOptions> diffCheckNotificationOptions) {
+      Optional<DiffCheckNotificationOptions> diffCheckNotificationOptions,
+      InMemoryGraphFactory graphFactory) {
     super(
         skyframeExecutorConsumerOnInit,
         pkgFactory,
@@ -209,6 +213,7 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
         repoContentsCachePathSupplier,
         globUnderSingleDep,
         diffCheckNotificationOptions);
+    this.graphFactory = Preconditions.checkNotNull(graphFactory);
   }
 
   @Override
@@ -230,7 +235,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
         trackIncrementalState ? DEFAULT_EVENT_FILTER_WITH_ACTIONS : EventFilter.NO_STORAGE,
         emittedEventState,
         trackIncrementalState,
-        /* usePooledInterning= */ true);
+        /* usePooledInterning= */ true,
+        graphFactory);
   }
 
   @Override
@@ -929,6 +935,7 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
     private SkyKeyStateReceiver skyKeyStateReceiver = SkyKeyStateReceiver.NULL_INSTANCE;
     private SyscallCache syscallCache = null;
     private boolean globUnderSingleDep = true;
+    private InMemoryGraphFactory graphFactory = InMemoryGraphFactory.DEFAULT;
     private DiffCheckNotificationOptions diffCheckNotificationOptions;
 
     private Builder() {}
@@ -967,9 +974,17 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
               compressionService,
               bugReporter,
               globUnderSingleDep,
-              Optional.ofNullable(diffCheckNotificationOptions));
+              Optional.ofNullable(diffCheckNotificationOptions),
+              graphFactory);
       skyframeExecutor.init();
       return skyframeExecutor;
+    }
+
+    /** Selects graph storage before evaluator construction; also used on evaluator reset. */
+    @CanIgnoreReturnValue
+    public Builder setGraphFactory(InMemoryGraphFactory graphFactory) {
+      this.graphFactory = Preconditions.checkNotNull(graphFactory);
+      return this;
     }
 
     @CanIgnoreReturnValue

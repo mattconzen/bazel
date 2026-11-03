@@ -94,7 +94,6 @@ import com.google.devtools.build.lib.vfs.PathFragment;
 import com.google.devtools.build.lib.vfs.Root;
 import com.google.devtools.build.lib.vfs.Root.RootCodecDependencies;
 import com.google.devtools.build.skyframe.InMemoryGraph;
-import com.google.devtools.build.skyframe.IncrementalInMemoryNodeEntry;
 import com.google.devtools.build.skyframe.MemoizingEvaluator;
 import com.google.devtools.build.skyframe.NodeEntry;
 import com.google.devtools.build.skyframe.QueryableGraph.Reason;
@@ -586,8 +585,7 @@ public class DumpCommand implements BlazeCommand {
           if (since.atMost(entry.getVersion())) {
             changed.add(entry.getKey());
             changedCounts.add(entry.getKey().functionName());
-          } else if (entry instanceof IncrementalInMemoryNodeEntry incrementalEntry
-              && since.atMost(incrementalEntry.lastEvaluatedVersion())) {
+          } else if (entry.keepsEdges() && since.atMost(entry.lastEvaluatedVersion())) {
             unchangedCounts.add(entry.getKey().functionName());
           }
         });
