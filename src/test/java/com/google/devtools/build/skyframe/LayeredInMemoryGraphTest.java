@@ -21,8 +21,13 @@ import com.google.devtools.build.skyframe.GraphTester.StringValue;
 import com.google.devtools.build.skyframe.NodeEntry.DependencyState;
 import com.google.devtools.build.skyframe.NodeEntry.DirtyType;
 import com.google.devtools.build.skyframe.QueryableGraph.Reason;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
@@ -30,11 +35,26 @@ import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 /** Freeze, membership, recovery and concurrent promotion regression cases. */
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public final class LayeredInMemoryGraphTest {
+  private enum Backend {
+    HEAP,
+    MAPPED
+  }
+
+  @TestParameter private Backend backend;
+
+  private UUID freeze() throws Exception {
+    if (backend == Backend.HEAP) {
+      return graph.freezeAtQuiescentBoundary();
+    }
+    return graph.freezeMappedAtQuiescentBoundary(
+        Files.createTempDirectory(Path.of(System.getenv("TEST_TMPDIR")), "arena-"),
+        "fda97de2b3b179ecdfa8af455fffde8d0b6b6422");
+  }
+
   private final LayeredInMemoryGraph graph = new LayeredInMemoryGraph(false);
 
   @After
@@ -63,7 +83,7 @@ public final class LayeredInMemoryGraphTest {
     var values = graph.getValues();
     var done = graph.getDoneValues();
     var all = graph.getAllNodeEntries();
-    var generation = graph.freezeAtQuiescentBoundary();
+    var generation = freeze();
     assertThat(graph.baselineGeneration()).isEqualTo(generation);
     assertThat(graph.baselineNodeCount()).isEqualTo(1);
     assertThat(entry.isFrozen()).isTrue();
@@ -90,7 +110,7 @@ public final class LayeredInMemoryGraphTest {
     var old = complete("a");
     var key = old.getKey();
     var values = graph.getValues();
-    graph.freezeAtQuiescentBoundary();
+    freeze();
     graph.remove(key);
     assertThat(graph.getIfPresent(key)).isNull();
     assertThat(graph.get(null, Reason.OTHER, key)).isNull();
@@ -114,18 +134,18 @@ public final class LayeredInMemoryGraphTest {
     var inflight = entry("inflight");
     inflight.addReverseDepAndCheckIfDone(null);
     Thread.currentThread().interrupt();
-    assertThrows(InterruptedException.class, graph::freezeAtQuiescentBoundary);
+    assertThrows(InterruptedException.class, this::freeze);
     assertThat(Thread.interrupted()).isFalse();
     assertThat(graph.baselineGeneration()).isNull();
     assertThat(successful.isFrozen()).isFalse();
-    graph.freezeAtQuiescentBoundary();
+    freeze();
     assertThat(successful.isFrozen()).isTrue();
     assertThat(dirty.isFrozen()).isFalse();
     assertThat(dirty.isDirty()).isTrue();
     assertThat(inflight.isFrozen()).isFalse();
     assertThat(inflight.isDone()).isFalse();
     assertThat(graph.baselineNodeCount()).isEqualTo(1);
-    assertThrows(IllegalStateException.class, graph::freezeAtQuiescentBoundary);
+    assertThrows(IllegalStateException.class, this::freeze);
   }
 
   @Test
@@ -153,7 +173,7 @@ public final class LayeredInMemoryGraphTest {
       entry.signalDep(IntVersion.of(2), dep);
     }
     entry.setValue(new StringValue("value"), IntVersion.of(2), null);
-    graph.freezeAtQuiescentBoundary();
+    freeze();
     DoneDeps reader = entry.getDoneDeps();
     assertThat(reader.groups())
         .containsExactly(ImmutableList.of(b, c), ImmutableList.of(d))
@@ -173,7 +193,7 @@ public final class LayeredInMemoryGraphTest {
   @Test
   public void concurrentPromotionHasOneOwnerAndOneSchedulingResponse() throws Exception {
     var entry = complete("a");
-    graph.freezeAtQuiescentBoundary();
+    freeze();
     int threads = 8;
     try (var executor = Executors.newFixedThreadPool(threads)) {
       var barrier = new CyclicBarrier(threads);

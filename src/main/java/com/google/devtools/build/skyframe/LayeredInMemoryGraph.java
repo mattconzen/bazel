@@ -18,6 +18,9 @@ import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.build.lib.concurrent.ThreadSafety.ThreadHostile;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,10 +48,12 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
   static final class PromotionCounters {
     private final ConcurrentHashMap<String, LongAdder> reasons = new ConcurrentHashMap<>();
     private final LongAdder copiedDependencies = new LongAdder();
+    private final LongAdder copiedMappedBytes = new LongAdder();
 
-    void record(String reason, long dependencies) {
+    void record(String reason, long dependencies, long mappedBytes) {
       reasons.computeIfAbsent(reason, unused -> new LongAdder()).increment();
       copiedDependencies.add(dependencies);
+      copiedMappedBytes.add(mappedBytes);
     }
   }
 
@@ -73,6 +78,22 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
    */
   @ThreadHostile
   public UUID freezeAtQuiescentBoundary() throws InterruptedException {
+    try {
+      return freezeAtQuiescentBoundary(null, null);
+    } catch (IOException impossible) {
+      throw new AssertionError(impossible);
+    }
+  }
+
+  /** Same exclusion contract as heap freezing, with dependency vectors in an immutable arena. */
+  @ThreadHostile
+  public UUID freezeMappedAtQuiescentBoundary(Path directory, String bazelRevision)
+      throws IOException, InterruptedException {
+    return freezeAtQuiescentBoundary(directory, bazelRevision);
+  }
+
+  private UUID freezeAtQuiescentBoundary(@Nullable Path directory, @Nullable String bazelRevision)
+      throws IOException, InterruptedException {
     checkState(!hasFrozen, "One frozen generation is supported per graph lifetime");
     var candidates = new ArrayList<LayeredNodeEntry.FreezeCandidate>();
     for (var node : nodeMap.values()) {
@@ -84,25 +105,44 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
         candidates.add(candidate);
       }
     }
-    var store = new FrozenGraphStore(candidates.size());
     var replacements = new ArrayList<Object>(candidates.size());
-    for (int i = 0; i < candidates.size(); i++) {
-      replacements.add(candidates.get(i).handle().frozenStorage(store, candidates.get(i).record()));
-    }
-    if (Thread.interrupted()) {
-      throw new InterruptedException();
-    }
+    FrozenGraphStore store =
+        directory == null
+            ? new FrozenGraphStore(candidates.size())
+            : MappedGraphStore.create(directory, bazelRevision, candidates);
     int committed = 0;
     try {
+      for (int i = 0; i < candidates.size(); i++) {
+        var record = candidates.get(i).record();
+        if (store instanceof MappedGraphStore mapped) {
+          record =
+              new FrozenNodeRecord(
+                  record.wrappedValue(),
+                  record.version(),
+                  mapped.directDeps(i),
+                  mapped.reverseDeps(i));
+        }
+        replacements.add(candidates.get(i).handle().frozenStorage(store, record));
+      }
+      if (Thread.interrupted()) {
+        throw new InterruptedException();
+      }
       for (int i = 0; i < candidates.size(); i++) {
         var candidate = candidates.get(i);
         candidate.handle().installStorage(candidate.original(), replacements.get(i));
         committed++;
       }
-    } catch (RuntimeException | Error failure) {
+    } catch (InterruptedException | RuntimeException | Error failure) {
       for (int i = committed - 1; i >= 0; i--) {
         var candidate = candidates.get(i);
         candidate.handle().installStorage(replacements.get(i), candidate.original());
+      }
+      if (store.backingFile() != null) {
+        try {
+          Files.deleteIfExists(store.backingFile());
+        } catch (IOException cleanup) {
+          failure.addSuppressed(cleanup);
+        }
       }
       throw failure;
     }
@@ -117,6 +157,25 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
     return store == null ? null : store.generation();
   }
 
+  public long mappedBytes() {
+    var store = baseline;
+    return store == null ? 0 : store.mappedBytes();
+  }
+
+  @Nullable
+  public Path backingFile() {
+    var store = baseline;
+    return store == null ? null : store.backingFile();
+  }
+
+  public long materializedDependencyCount() {
+    return baseline instanceof MappedGraphStore mapped ? mapped.materializedDependencyCount() : 0;
+  }
+
+  FrozenGraphStore baselineStoreForTesting() {
+    return baseline;
+  }
+
   public int baselineNodeCount() {
     var store = baseline;
     return store == null ? 0 : store.size();
@@ -126,6 +185,11 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
     var result = ImmutableMap.<String, Long>builder();
     promotions.reasons.forEach((reason, count) -> result.put(reason, count.sum()));
     return result.buildOrThrow();
+  }
+
+  /** Encoded arena bytes materialized on promotion, excluding retained Java values and keys. */
+  public long copiedMappedBytes() {
+    return promotions.copiedMappedBytes.sum();
   }
 
   public long copiedDependencyCount() {
