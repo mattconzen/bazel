@@ -514,6 +514,33 @@ public class BlazeCommandDispatcher implements CommandDispatcher {
         }
       }
 
+      String graphRejection = env.getSkyframeExecutor().sharedGraphCommandRejection(commandName);
+      if (graphRejection == null
+          && !commandName.equals("shutdown")
+          && env.getSkyframeExecutor().sharedGraphEnabled()) {
+        var keep = options.getOptions(KeepStateAfterBuildOption.class);
+        var analysis =
+            options.getOptions(com.google.devtools.build.lib.analysis.AnalysisOptions.class);
+        var startup =
+            runtime.getStartupOptionsProvider().getOptions(BlazeServerStartupOptions.class);
+        if (startup.getBatch()
+            || startup.getIdleServerTasks()
+            || !commonOptions.getTrackIncrementalState()
+            || commonOptions.getHeuristicallyDropNodes()
+            || !keep.getKeepStateAfterBuild()
+            || (analysis != null && analysis.getDiscardAnalysisCache())) {
+          graphRejection =
+              "Shared graphs require a persistent server with --noidle_server_tasks, "
+                  + "retained incremental state, and retained analysis";
+        }
+      }
+      if (graphRejection != null) {
+        outErr.printErrLn(graphRejection);
+        result =
+            createDetailedCommandResult(
+                graphRejection, FailureDetails.Command.Code.OPTIONS_PARSE_FAILURE);
+        return result;
+      }
       needToCallAfterCommand = true;
       // Both the call to env.decideKeepIncrementalState() and module.beforeCommand() may emit
       // events, but the reporter isn't setup yet. Use a stored event handler to catch those events.
@@ -832,6 +859,17 @@ public class BlazeCommandDispatcher implements CommandDispatcher {
       if (!result.getExitCode().isInfrastructureFailure() && moduleExitCode != null) {
         result = BlazeCommandResult.detailedExitCode(moduleExitCode);
       }
+
+      var graphBuildOptions =
+          options.getOptions(com.google.devtools.build.lib.buildtool.BuildRequestOptions.class);
+      env.getSkyframeExecutor()
+          .noteSharedGraphCommandResult(
+              commandName,
+              result.isSuccess()
+                  && commandName.equals("build")
+                  && graphBuildOptions != null
+                  && graphBuildOptions.getPerformAnalysisPhase()
+                  && !graphBuildOptions.getPerformExecutionPhase());
 
       // Finalize the Starlark CPU profile.
       if (starlarkCpuProfileStarted) {

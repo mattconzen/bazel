@@ -29,6 +29,15 @@ import java.util.function.Supplier;
 
 /** A factory of SkyframeExecutors that returns SequencedSkyframeExecutor. */
 public final class SequencedSkyframeExecutorFactory implements SkyframeExecutorFactory {
+  private final String sharedGraphMode;
+
+  public SequencedSkyframeExecutorFactory() {
+    this("off");
+  }
+
+  public SequencedSkyframeExecutorFactory(String sharedGraphMode) {
+    this.sharedGraphMode = sharedGraphMode;
+  }
 
   @Override
   public SkyframeExecutor create(
@@ -46,6 +55,7 @@ public final class SequencedSkyframeExecutorFactory implements SkyframeExecutorF
       CompressionService compressionService,
       BugReporter bugReporter) {
     return SequencedSkyframeExecutor.newBazelSkyframeExecutorBuilder()
+        .setSharedGraphMode(sharedGraphMode)
         .setPkgFactory(pkgFactory)
         .setFileSystem(fileSystem)
         .setDirectories(directories)

@@ -84,6 +84,24 @@ class StartupOptionsTest : public ::testing::Test {
   std::string old_test_tmpdir_;
 };
 
+TEST_F(StartupOptionsTest, SharedGraphMode) {
+  EXPECT_EQ("off", startup_options_->shared_graph_mode);
+  for (const auto &mode : {"off", "heap", "mapped"}) {
+    std::string error;
+    const std::vector<RcStartupFlag> flags{RcStartupFlag(
+        "test", std::string("--experimental_shared_graph_mode=") + mode)};
+    EXPECT_EQ(blaze_exit_code::SUCCESS,
+              startup_options_->ProcessArgs(flags, &error))
+        << error;
+    EXPECT_EQ(mode, startup_options_->shared_graph_mode);
+  }
+  std::string error;
+  const std::vector<RcStartupFlag> invalid{
+      RcStartupFlag("test", "--experimental_shared_graph_mode=invalid")};
+  EXPECT_EQ(blaze_exit_code::BAD_ARGV,
+            startup_options_->ProcessArgs(invalid, &error));
+}
+
 TEST_F(StartupOptionsTest, ProductName) {
   ASSERT_EQ("Bazel", startup_options_->product_name);
 }

@@ -418,6 +418,8 @@ static vector<string> GetServerExeArgs(const blaze_util::Path &jvm_path,
   }
 
   result.push_back("--product_name=" + startup_options.product_name);
+  result.push_back("--experimental_shared_graph_mode=" +
+                   startup_options.shared_graph_mode);
 
 #ifdef __linux__
   if (!startup_options.cgroup_parent.empty()) {

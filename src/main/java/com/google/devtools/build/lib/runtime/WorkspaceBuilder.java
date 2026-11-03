@@ -108,7 +108,12 @@ public final class WorkspaceBuilder {
       throws AbruptExitException {
     // Set default values if none are set.
     if (skyframeExecutorFactory == null) {
-      skyframeExecutorFactory = new SequencedSkyframeExecutorFactory();
+      skyframeExecutorFactory =
+          new SequencedSkyframeExecutorFactory(
+              runtime
+                  .getStartupOptionsProvider()
+                  .getOptions(BlazeServerStartupOptions.class)
+                  .getSharedGraphMode());
     }
     if (syscallCache == null) {
       syscallCache =

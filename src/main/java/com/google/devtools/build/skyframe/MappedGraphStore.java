@@ -60,6 +60,7 @@ final class MappedGraphStore extends FrozenGraphStore {
   private final SkyKey[] keys;
   private final Path file;
   private final String revision;
+  private volatile long prefaultWitness;
   private final LongAdder materializedDependencies = new LongAdder();
 
   private MappedGraphStore(
@@ -366,6 +367,14 @@ final class MappedGraphStore extends FrozenGraphStore {
   @Override
   Path backingFile() {
     return file;
+  }
+
+  void prefault() {
+    long witness = 0;
+    for (long offset = 0; offset < data.byteSize(); offset += 4096) {
+      witness += data.get(ValueLayout.JAVA_BYTE, offset);
+    }
+    prefaultWitness = witness;
   }
 
   void recordMaterialization(int count) {

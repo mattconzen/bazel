@@ -178,6 +178,7 @@ StartupOptions::StartupOptions(const string& product_name,
   RegisterUnaryStartupFlag("failure_detail_out");
   RegisterUnaryStartupFlag("experimental_cgroup_parent");
   RegisterUnaryStartupFlag("extra_classpath");
+  RegisterUnaryStartupFlag("experimental_shared_graph_mode");
 }
 
 StartupOptions::~StartupOptions() {}
@@ -344,6 +345,15 @@ blaze_exit_code::ExitCode StartupOptions::ProcessArg(const string& argstr,
              nullptr) {
     host_jvm_args.push_back(value);
     option_sources["host_jvm_args"] = rcfile;  // NB: This is incorrect
+  } else if ((value = GetUnaryOption(arg, next_arg,
+                                     "--experimental_shared_graph_mode"))) {
+    shared_graph_mode = value;
+    if (shared_graph_mode != "off" && shared_graph_mode != "heap" &&
+        shared_graph_mode != "mapped") {
+      *error = "--experimental_shared_graph_mode must be off, heap, or mapped";
+      return blaze_exit_code::BAD_ARGV;
+    }
+    option_sources["experimental_shared_graph_mode"] = rcfile;
   } else if ((value = GetUnaryOption(arg, next_arg, "--extra_classpath"))) {
     extra_classpath = value;
     option_sources["extra_classpath"] = rcfile;

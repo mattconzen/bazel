@@ -1780,6 +1780,18 @@ public abstract class SkyframeExecutor implements WalkableGraphFactory {
     return new FileDirtinessChecker();
   }
 
+  /** Checked under command exclusion before command initialization can consume graph state. */
+  @Nullable
+  public String sharedGraphCommandRejection(String commandName) {
+    return null;
+  }
+
+  public boolean sharedGraphEnabled() {
+    return false;
+  }
+
+  public void noteSharedGraphCommandResult(String commandName, boolean successfulAnalysisOnly) {}
+
   /**
    * Deletes all loaded packages and their upwards transitive closure, forcing reevaluation of all
    * affected nodes.
@@ -4254,8 +4266,6 @@ public abstract class SkyframeExecutor implements WalkableGraphFactory {
     incrementalBuildMonitor.accrue(changedKeysWithNewValues.keySet());
   }
 
-
-
   private static final int MAX_NUMBER_OF_CHANGED_KEYS_TO_LOG = 10;
 
   private static void logDiffInfo(
@@ -4655,7 +4665,6 @@ public abstract class SkyframeExecutor implements WalkableGraphFactory {
       return (UnloadedToolchainContext) memoizingEvaluator.getExistingValue(key);
     }
   }
-
 
   /**
    * Defines configuration for the diff checking and the progress message shown during a slow diff

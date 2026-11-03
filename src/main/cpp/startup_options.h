@@ -184,6 +184,8 @@ class StartupOptions {
 
   std::string extra_classpath;
 
+  std::string shared_graph_mode = "off";
+
   bool batch;
 
   // From the man page: "This policy is useful for workloads that are

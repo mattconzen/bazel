@@ -34,6 +34,7 @@ java_library(
         ":run_command_line",
     ],
     deps = [
+        "//src/main/java/com/google/devtools/build/lib/skyframe:sequenced_skyframe_executor",
         ":no_tests_found",
         ":paths_to_replace_utils",
         ":run_command_line",

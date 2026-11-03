@@ -157,6 +157,12 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
     return store == null ? null : store.generation();
   }
 
+  public void prefaultBaseline() {
+    if (baseline instanceof MappedGraphStore mapped) {
+      mapped.prefault();
+    }
+  }
+
   public long mappedBytes() {
     var store = baseline;
     return store == null ? 0 : store.mappedBytes();

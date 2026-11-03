@@ -1,9 +1,9 @@
 # Measurement tools and open acceptance gates
 
 These tools collect evidence; they do not create VMs or establish memory savings.
-The mapped graph remains an internal prototype until template preparation,
-command admission and restore reconciliation are integrated with the selected
-VM controller and branch materializer.
+The mapped graph is an experimental prototype with explicit preparation,
+command admission and restore reconciliation in the forked Firecracker harness.
+Physical-memory acceptance remains conditional on representative runs.
 
 ## Graph inventory
 

@@ -159,7 +159,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
   protected final DelegatingGraphInconsistencyReceiver inconsistencyReceiver =
       new DelegatingGraphInconsistencyReceiver(GraphInconsistencyReceiver.THROWING);
 
-  private final InMemoryGraphFactory graphFactory;
+  private InMemoryGraphFactory graphFactory;
+  private final SharedGraphLifecycle sharedGraphLifecycle;
 
   protected SequencedSkyframeExecutor(
       Consumer<SkyframeExecutor> skyframeExecutorConsumerOnInit,
@@ -184,7 +185,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       BugReporter bugReporter,
       boolean globUnderSingleDep,
       Optional<DiffCheckNotificationOptions> diffCheckNotificationOptions,
-      InMemoryGraphFactory graphFactory) {
+      InMemoryGraphFactory graphFactory,
+      String sharedGraphMode) {
     super(
         skyframeExecutorConsumerOnInit,
         pkgFactory,
@@ -214,12 +216,85 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
         globUnderSingleDep,
         diffCheckNotificationOptions);
     this.graphFactory = Preconditions.checkNotNull(graphFactory);
+    this.sharedGraphLifecycle = new SharedGraphLifecycle(sharedGraphMode);
   }
 
   @Override
   public void resetEvaluator() {
     super.resetEvaluator();
-    diffAwarenessManager.reset();
+    resetFilesystemWatching();
+    if (sharedGraphLifecycle != null) {
+      sharedGraphLifecycle.retire();
+    }
+  }
+
+  public void resetFilesystemWatching() {
+    if (diffAwarenessManager != null) {
+      diffAwarenessManager.reset();
+    }
+    syscallCache.clear();
+    com.google.devtools.build.lib.vfs.DigestUtils.clearCache();
+  }
+
+  @Override
+  public String sharedGraphCommandRejection(String commandName) {
+    return sharedGraphLifecycle.commandRejection(commandName);
+  }
+
+  @Override
+  public boolean sharedGraphEnabled() {
+    return sharedGraphLifecycle.enabled();
+  }
+
+  @Override
+  public void noteSharedGraphCommandResult(String commandName, boolean successfulAnalysisOnly) {
+    sharedGraphLifecycle.noteCommandResult(commandName, successfulAnalysisOnly);
+  }
+
+  public java.util.Map<String, Object> sharedGraphOperation(
+      String operation,
+      String directory,
+      String revision,
+      String generation,
+      ExtendedEventHandler eventHandler)
+      throws java.io.IOException, InterruptedException {
+    switch (operation) {
+      case "prepare" -> {
+        if (!trackIncrementalState) {
+          throw new IllegalStateException("Shared graph preparation requires incremental state");
+        }
+        sharedGraphLifecycle.prepare(memoizingEvaluator.getInMemoryGraph(), directory, revision);
+      }
+      case "reconcile" -> {
+        sharedGraphLifecycle.beginReconciliation(generation);
+        try {
+          resetFilesystemWatching();
+          var changed = sharedGraphLifecycle.changedKeys();
+          memoizingEvaluator.delete(changed::contains);
+          recordingDiffer.invalidateTransientErrors();
+          memoizingEvaluator.evaluate(
+              ImmutableList.of(),
+              com.google.devtools.build.skyframe.EvaluationContext.newBuilder()
+                  .setKeepGoing(true)
+                  .setParallelism(1)
+                  .setEventHandler(eventHandler)
+                  .build());
+          sharedGraphLifecycle.finishReconciliation(changed.size());
+        } catch (java.io.IOException | InterruptedException | RuntimeException | Error failure) {
+          sharedGraphLifecycle.failReconciliation(failure.toString());
+          throw failure;
+        }
+      }
+      case "discard" -> {
+        graphFactory = InMemoryGraphFactory.DEFAULT;
+        resetEvaluator();
+        sharedGraphLifecycle.fallback();
+      }
+      case "status" -> {}
+      default ->
+          throw new IllegalArgumentException("Expected prepare, reconcile, status, or discard");
+    }
+    return sharedGraphLifecycle.status();
   }
 
   @Override
@@ -936,6 +1011,7 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
     private SyscallCache syscallCache = null;
     private boolean globUnderSingleDep = true;
     private InMemoryGraphFactory graphFactory = InMemoryGraphFactory.DEFAULT;
+    private String sharedGraphMode = "off";
     private DiffCheckNotificationOptions diffCheckNotificationOptions;
 
     private Builder() {}
@@ -975,9 +1051,21 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
               bugReporter,
               globUnderSingleDep,
               Optional.ofNullable(diffCheckNotificationOptions),
-              graphFactory);
+              graphFactory,
+              sharedGraphMode);
       skyframeExecutor.init();
       return skyframeExecutor;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder setSharedGraphMode(String mode) {
+      Preconditions.checkArgument(ImmutableSet.of("off", "heap", "mapped").contains(mode));
+      this.sharedGraphMode = mode;
+      this.graphFactory =
+          mode.equals("off")
+              ? InMemoryGraphFactory.DEFAULT
+              : com.google.devtools.build.skyframe.LayeredInMemoryGraph.FACTORY;
+      return this;
     }
 
     /** Selects graph storage before evaluator construction; also used on evaluator reset. */

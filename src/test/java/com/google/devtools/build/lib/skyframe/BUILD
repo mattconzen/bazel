@@ -2439,3 +2439,22 @@ java_test(
         "//third_party/java/truth",
     ],
 )
+
+java_test(
+    name = "SharedGraphLifecycleTest",
+    srcs = ["SharedGraphLifecycleTest.java"],
+    deps = [
+        "//src/main/java/com/google/devtools/build/lib/skyframe:directory_listing_state_value",
+        "//src/main/java/com/google/devtools/build/lib/clock",
+        "//src/main/java/com/google/devtools/build/lib/skyframe:sequenced_skyframe_executor",
+        "//src/main/java/com/google/devtools/build/lib/skyframe:filesystem_keys",
+        "//src/main/java/com/google/devtools/build/lib/vfs",
+        "//src/main/java/com/google/devtools/build/lib/vfs/inmemoryfs",
+        "//src/main/java/com/google/devtools/build/skyframe",
+        "//src/main/java/com/google/devtools/build/skyframe:skyframe-objects",
+        "//src/test/java/com/google/devtools/build/lib/testutil",
+        "//third_party/java/guava:collect",
+        "//third_party/java/junit",
+        "//third_party/java/truth",
+    ],
+)
