@@ -86,7 +86,7 @@ inherited daemon.
 The controller closes the seed VMM before hashing and protecting the disk, state
 and RAM assets. It fsyncs them and atomically commits a manifest with their
 lengths/digests, binary provenance and arena identity. The arena lives inside the
-matching ext4 image. It validates the committed assets before cloning. Private
+matching ext4 image. It validates the committed assets before cloning. The snapshot loader initially opens a separate writable bootstrap disk at its saved drive path; while paused, the controller switches to each private clone and verifies that the bootstrap was unchanged. The published canonical disk is never the writable bootstrap. Private
 disk copies are explicitly writable; shared snapshot RAM uses the same immutable
 host file and offsets. Published assets remain until every cohort VM is closed.
 This is a run-scoped generation, not a reusable cross-run template registry.
