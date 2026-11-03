@@ -93,6 +93,7 @@ import com.google.devtools.build.lib.util.SerializedAbruptExitException;
 import com.google.devtools.build.lib.vfs.PathFragment;
 import com.google.devtools.build.lib.vfs.Root;
 import com.google.devtools.build.lib.vfs.Root.RootCodecDependencies;
+import com.google.devtools.build.skyframe.GraphStorageStats;
 import com.google.devtools.build.skyframe.InMemoryGraph;
 import com.google.devtools.build.skyframe.MemoizingEvaluator;
 import com.google.devtools.build.skyframe.NodeEntry;
@@ -374,6 +375,7 @@ public class DumpCommand implements BlazeCommand {
   public enum SkyframeDumpOption {
     OFF,
     SUMMARY,
+    STORAGE,
     COUNT,
     KEYS,
     VALUE,
@@ -524,6 +526,7 @@ public class DumpCommand implements BlazeCommand {
       MemoizingEvaluator evaluator = env.getSkyframeExecutor().getEvaluator();
       switch (dumpOptions.getDumpSkyframe()) {
         case SUMMARY -> evaluator.dumpSummary(out);
+        case STORAGE -> dumpGraphStorage(evaluator.getInMemoryGraph(), out);
         case COUNT -> evaluator.dumpCount(out);
         case KEYS -> evaluator.dumpKeys(out, dumpOptions.getSkyKeyFilter());
         case VALUE -> evaluator.dumpValues(out, dumpOptions.getSkyKeyFilter());
@@ -547,6 +550,45 @@ public class DumpCommand implements BlazeCommand {
     } finally {
       out.flush();
     }
+  }
+
+  private static void dumpGraphStorage(InMemoryGraph graph, PrintStream out)
+      throws InterruptedException {
+    var stats = GraphStorageStats.collect(graph);
+    var text = new StringWriter();
+    try (var json = new JsonWriter(text)) {
+      json.beginObject();
+      json.name("schema_version").value(1);
+      json.name("mode").value(stats.mode());
+      json.name("generation").value(stats.generation());
+      json.name("nodes").value(stats.nodes());
+      json.name("done_nodes").value(stats.doneNodes());
+      json.name("dirty_nodes").value(stats.dirtyNodes());
+      json.name("error_nodes").value(stats.errorNodes());
+      json.name("direct_dependencies").value(stats.directDependencies());
+      json.name("direct_groups").value(stats.directGroups());
+      json.name("heap_dependency_arrays").value(stats.heapDependencyArrays());
+      json.name("heap_dependency_array_reference_slots")
+          .value(stats.heapDependencyArrayReferenceSlots());
+      json.name("mapped_bytes").value(stats.mappedBytes());
+      json.name("materialized_dependency_ids").value(stats.materializedDependencies());
+      json.name("promoted_dependency_ids").value(stats.promotedDependencies());
+      json.name("copied_mapped_bytes").value(stats.copiedMappedBytes());
+      json.name("promotions_by_reason").beginObject();
+      for (var reason : stats.promotionsByReason().entrySet()) {
+        json.name(reason.getKey()).value(reason.getValue());
+      }
+      json.endObject();
+      json.name("value_node_counts_by_class").beginObject();
+      for (var type : stats.valueNodeCountsByClass().entrySet()) {
+        json.name(type.getKey()).value(type.getValue());
+      }
+      json.endObject();
+      json.endObject();
+    } catch (IOException impossible) {
+      throw new AssertionError(impossible);
+    }
+    out.println(text);
   }
 
   /**

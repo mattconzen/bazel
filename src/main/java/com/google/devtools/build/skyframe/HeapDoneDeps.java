@@ -27,6 +27,10 @@ final class HeapDoneDeps implements DoneDeps {
     this.compressed = compressed;
   }
 
+  long arrayReferenceSlots() {
+    return compressed instanceof Object[] array ? array.length : 0;
+  }
+
   @Override
   public int dependencyCount() {
     return GroupedDeps.numElements(compressed);
