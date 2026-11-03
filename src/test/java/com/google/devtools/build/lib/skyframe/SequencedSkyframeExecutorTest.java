@@ -146,6 +146,8 @@ import com.google.devtools.build.skyframe.Differencer.DiffWithDelta.Delta;
 import com.google.devtools.build.skyframe.EvaluationContext;
 import com.google.devtools.build.skyframe.EvaluationResult;
 import com.google.devtools.build.skyframe.GraphTester;
+import com.google.devtools.build.skyframe.InMemoryGraph;
+import com.google.devtools.build.skyframe.InMemoryGraphFactory;
 import com.google.devtools.build.skyframe.NotifyingHelper;
 import com.google.devtools.build.skyframe.NotifyingHelper.EventType;
 import com.google.devtools.build.skyframe.SkyFunction;
@@ -214,6 +216,32 @@ public final class SequencedSkyframeExecutorTest extends BuildViewTestCase {
           .build();
   private final Map<SkyFunctionName, SkyFunction> extraSkyFunctions = new HashMap<>();
   private QueryTransitivePackagePreloader visitor;
+  private int graphFactoryCalls;
+  private java.lang.ref.WeakReference<InMemoryGraph> lastFactoryGraph;
+
+  @Override
+  protected InMemoryGraphFactory getGraphFactory() {
+    return (keepEdges, pooledInterning) -> {
+      InMemoryGraph graph = InMemoryGraphFactory.DEFAULT.create(keepEdges, pooledInterning);
+      graphFactoryCalls++;
+      lastFactoryGraph = new java.lang.ref.WeakReference<>(graph);
+      return graph;
+    };
+  }
+
+  @Test
+  public void graphFactoryIsUsedForConstructionAndReset() {
+    InMemoryGraph original = skyframeExecutor.getEvaluator().getInMemoryGraph();
+    assertThat(graphFactoryCalls).isGreaterThan(0);
+    assertThat(lastFactoryGraph.get()).isSameInstanceAs(original);
+    int previousCalls = graphFactoryCalls;
+    skyframeExecutor.resetEvaluator();
+    InMemoryGraph replacement = skyframeExecutor.getEvaluator().getInMemoryGraph();
+    assertThat(graphFactoryCalls).isEqualTo(previousCalls + 1);
+    assertThat(lastFactoryGraph.get()).isSameInstanceAs(replacement);
+    assertThat(replacement).isNotSameInstanceAs(original);
+    assertThat(replacement.valuesSize()).isEqualTo(0);
+  }
 
   @Before
   public void createVisitorAndParseOptions() throws Exception {

@@ -19,7 +19,11 @@ import org.junit.runners.JUnit4;
 
 /** Tests for {@link InMemoryMemoizingEvaluator}. */
 @RunWith(JUnit4.class)
-public final class InMemoryMemoizingEvaluatorTest extends MemoizingEvaluatorTest {
+public class InMemoryMemoizingEvaluatorTest extends MemoizingEvaluatorTest {
+
+  protected InMemoryGraphFactory graphFactory() {
+    return InMemoryGraphFactory.DEFAULT;
+  }
 
   @Override
   protected InMemoryMemoizingEvaluator getMemoizingEvaluator(
@@ -36,6 +40,7 @@ public final class InMemoryMemoizingEvaluatorTest extends MemoizingEvaluatorTest
         eventFilter,
         emittedEventState,
         /* keepEdges= */ true,
-        /* usePooledInterning= */ true);
+        /* usePooledInterning= */ true,
+        graphFactory());
   }
 }

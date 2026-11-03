@@ -53,7 +53,6 @@ import com.google.devtools.build.lib.skyframe.serialization.analysis.RemoteAnaly
 import com.google.devtools.build.lib.versioning.LongVersionGetter;
 import com.google.devtools.build.skyframe.InMemoryGraph;
 import com.google.devtools.build.skyframe.InMemoryNodeEntry;
-import com.google.devtools.build.skyframe.IncrementalInMemoryNodeEntry;
 import com.google.devtools.build.skyframe.MemoizingEvaluator;
 import com.google.devtools.build.skyframe.SkyKey;
 import com.google.devtools.build.skyframe.SkyValue;
@@ -274,7 +273,7 @@ public final class FrontierSerializer {
     graph.parallelForEach(
         node -> {
           switch (node.getKey()) {
-            case BzlLoadValue.Key unused -> ((IncrementalInMemoryNodeEntry) node).clearSkyValue();
+            case BzlLoadValue.Key unused -> node.clearSkyValue();
             case ActionLookupKey key -> {
               if (!node.isDone() || key.getLabel() == null) {
                 break;
@@ -311,7 +310,7 @@ public final class FrontierSerializer {
             return;
           }
 
-          ((IncrementalInMemoryNodeEntry) node).clearSkyValue();
+          node.clearSkyValue();
         });
   }
 
@@ -414,18 +413,16 @@ public final class FrontierSerializer {
     AtomicLong deletedRdeps = new AtomicLong();
     graph.parallelForEach(
         node -> {
-          IncrementalInMemoryNodeEntry incrementalInMemoryNodeEntry =
-              (IncrementalInMemoryNodeEntry) node;
           if (!skycacheAnalysisOnly && node.getKey() instanceof ActionLookupSummaryKey) {
             // skycacheAnalysisOnly mode requires ActionLookupSummaryKeys to remain in the graph.
             graph.remove(node.getKey());
             deletedNodes.incrementAndGet();
           } else {
-            for (SkyKey rdep : incrementalInMemoryNodeEntry.getReverseDepsForDoneEntry()) {
-              incrementalInMemoryNodeEntry.removeReverseDep(rdep);
+            for (SkyKey rdep : node.getReverseDepsForDoneEntry()) {
+              node.removeReverseDep(rdep);
               deletedRdeps.incrementAndGet();
             }
-            incrementalInMemoryNodeEntry.consolidateReverseDeps();
+            node.consolidateReverseDeps();
           }
         });
     return new DeletionStats(deletedNodes.get(), deletedRdeps.get());

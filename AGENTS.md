@@ -1,5 +1,14 @@
 # Bazel Codebase Guide for Gemini
 
+## Fork ownership for this experiment
+
+All pull requests for the shared graph work must target repositories owned by
+`mattconzen` on `github.com`. Never open a pull request against `bazelbuild/bazel`
+or any other owner. Always specify `--repo mattconzen/bazel` when creating a PR
+for this repository; do not rely on GitHub CLI's upstream default for forks.
+If another component needs changes, fork it into `mattconzen` before modifying
+it, and direct its pull requests to that fork.
+
 Welcome to the Bazel repository. This document provides essential context and
 workflows for working with the Bazel codebase.
 

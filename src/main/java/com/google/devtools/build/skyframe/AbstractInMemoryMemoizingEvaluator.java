@@ -386,10 +386,10 @@ public abstract class AbstractInMemoryMemoizingEvaluator implements MemoizingEva
           String canonicalizedKey = entry.getKey().getCanonicalName();
           out.println(canonicalizedKey);
           if (entry.keepsEdges()) {
-            GroupedDeps deps = GroupedDeps.decompress(entry.getCompressedDirectDepsForDoneEntry());
-            for (int i = 0; i < deps.numGroups(); i++) {
-              out.format("  Group %d:\n", i + 1);
-              for (SkyKey dep : deps.getDepGroup(i)) {
+            int groupNumber = 0;
+            for (var group : entry.getDoneDeps().groups()) {
+              out.format("  Group %d:\n", ++groupNumber);
+              for (SkyKey dep : group) {
                 out.print("    ");
                 out.println(dep.getCanonicalName());
                 out.println(); // newline for readability

@@ -36,6 +36,48 @@ public interface InMemoryNodeEntry extends NodeEntry {
   @GroupedDeps.Compressed
   Object getCompressedDirectDepsForDoneEntry();
 
+  /** Storage-independent reader of completed direct deps. Requires done state and stored edges. */
+  default DoneDeps getDoneDeps() {
+    return new HeapDoneDeps(getCompressedDirectDepsForDoneEntry());
+  }
+
+  /**
+   * Last evaluation version, including evaluations that pruned to an equal value. Non-incremental
+   * entries have only their constant version.
+   */
+  default Version lastEvaluatedVersion() {
+    return getVersion();
+  }
+
+  /**
+   * Returns last-build deps if this node can be kept by change pruning, or null otherwise. A
+   * non-null result requires every dependency to be present and no newer than this node's last
+   * evaluation version. Implementations without incremental dirty state return null.
+   */
+  @Nullable
+  default Iterable<SkyKey> lastBuildDepsIfChangePrunable() {
+    return null;
+  }
+
+  /**
+   * Discards the value for a serializer that will abandon incremental evaluation. Implementations
+   * must release the old storage or explicitly reject this destructive operation.
+   */
+  default void clearSkyValue() {
+    throw new UnsupportedOperationException("Value clearing is unsupported by this node storage");
+  }
+
+  /** Discards direct deps. The graph must not be used for incremental builds afterwards. */
+  default void clearDirectDeps() {
+    throw new UnsupportedOperationException(
+        "Dependency clearing is unsupported by this node storage");
+  }
+
+  /** Applies pending reverse-edge operations, preserving the existing notification semantics. */
+  default void consolidateReverseDeps() {
+    throw new UnsupportedOperationException("Reverse edge consolidation is unsupported");
+  }
+
   @Override // Remove InterruptedException.
   @Nullable
   SkyValue getValue();
