@@ -1105,6 +1105,11 @@ public abstract class SkyframeExecutor implements WalkableGraphFactory {
     remoteAnalysisCacheReaderDepsProvider = RemoteAnalysisCacheDeps.createDisabled();
   }
 
+  /** Starts the command-local receiver used by filesystem invalidation callbacks. */
+  protected final void startIncrementalBuildMonitoring() {
+    incrementalBuildMonitor = new SkyframeIncrementalBuildMonitor();
+  }
+
   /**
    * Notify listeners about changed files, and release any associated memory afterwards.
    *
@@ -3191,7 +3196,7 @@ public abstract class SkyframeExecutor implements WalkableGraphFactory {
       setDeletedPackages(packageOptions.getDeletedPackagesOrEmptySet());
     }
 
-    incrementalBuildMonitor = new SkyframeIncrementalBuildMonitor();
+    startIncrementalBuildMonitoring();
     invalidateTransientErrors();
     sourceArtifactsSeen.reset();
     outputArtifactsSeen.reset();

@@ -263,6 +263,10 @@ public abstract class BuildViewTestCase extends FoundationTestCase {
   }
 
   /** Storage selection shared by initial construction and evaluator resets. */
+  protected String getSharedGraphMode() {
+    return "off";
+  }
+
   protected InMemoryGraphFactory getGraphFactory() {
     return InMemoryGraphFactory.DEFAULT;
   }
@@ -341,6 +345,7 @@ public abstract class BuildViewTestCase extends FoundationTestCase {
     }
     skyframeExecutor =
         SequencedSkyframeExecutor.newBazelSkyframeExecutorBuilder()
+            .setSharedGraphMode(getSharedGraphMode())
             .setGraphFactory(getGraphFactory())
             .setPkgFactory(pkgFactory)
             .setFileSystem(fileSystem)

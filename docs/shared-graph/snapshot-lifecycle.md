@@ -97,3 +97,5 @@ guest reclamation/refault. The integration smoke and existing semantic tests do
 not establish fleet memory savings, production workload coverage, a private-memory
 budget, automatic replay after runtime invariant failures, or canary readiness.
 Those remain measurement and operational gates in the implementation plan.
+
+Restore also revalidates the mapped arena against the checksum retained by the warmed JVM before reading dependency vectors. Rewriting both arena contents and its on-disk checksum does not bypass this comparison. Reconciliation initializes the ordinary incremental file monitor before flushing pending invalidations, retaining the existing evaluator and version clock.

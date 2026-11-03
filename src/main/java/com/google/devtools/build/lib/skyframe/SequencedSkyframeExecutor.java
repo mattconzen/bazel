@@ -269,7 +269,12 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
         sharedGraphLifecycle.beginReconciliation(generation);
         try {
           resetFilesystemWatching();
+          if (memoizingEvaluator.getInMemoryGraph()
+              instanceof com.google.devtools.build.skyframe.LayeredInMemoryGraph layered) {
+            layered.verifyBaseline();
+          }
           var changed = sharedGraphLifecycle.changedKeys();
+          startIncrementalBuildMonitoring();
           memoizingEvaluator.delete(changed::contains);
           recordingDiffer.invalidateTransientErrors();
           memoizingEvaluator.evaluate(

@@ -60,16 +60,24 @@ final class MappedGraphStore extends FrozenGraphStore {
   private final SkyKey[] keys;
   private final Path file;
   private final String revision;
+  private final byte[] checksum;
   private volatile long prefaultWitness;
   private final LongAdder materializedDependencies = new LongAdder();
 
   private MappedGraphStore(
-      int size, UUID generation, Path file, String revision, SkyKey[] keys, MemorySegment data) {
+      int size,
+      UUID generation,
+      Path file,
+      String revision,
+      SkyKey[] keys,
+      MemorySegment data,
+      byte[] checksum) {
     super(size, generation);
     this.file = file;
     this.revision = revision;
     this.keys = keys;
     this.data = data;
+    this.checksum = checksum;
   }
 
   static MappedGraphStore create(
@@ -180,7 +188,8 @@ final class MappedGraphStore extends FrozenGraphStore {
       // initial Linux snapshot deployment deliberately requires a filesystem with hard-link
       // support.
       var publishedStore =
-          new MappedGraphStore(store.size(), generation, file, revision, keys, store.data);
+          new MappedGraphStore(
+              store.size(), generation, file, revision, keys, store.data, store.checksum);
       Files.setPosixFilePermissions(temporary, Set.of(PosixFilePermission.OWNER_READ));
       Files.createLink(file, temporary);
       return publishedStore;
@@ -243,7 +252,8 @@ final class MappedGraphStore extends FrozenGraphStore {
       try (var channel = FileChannel.open(file, StandardOpenOption.READ)) {
         mapping = channel.map(FileChannel.MapMode.READ_ONLY, 0, end, Arena.ofAuto());
       }
-      var store = new MappedGraphStore(records, generation, file, revision, keys, mapping);
+      var store =
+          new MappedGraphStore(records, generation, file, revision, keys, mapping, expected);
       store.validateRecords(directStart, reverseStart, end);
       return store;
     } catch (ArithmeticException | IndexOutOfBoundsException failure) {
@@ -367,6 +377,13 @@ final class MappedGraphStore extends FrozenGraphStore {
   @Override
   Path backingFile() {
     return file;
+  }
+
+  void verifyBackingFile() throws IOException {
+    var verified = openValidated(file, generation(), revision, size(), keys);
+    if (!MessageDigest.isEqual(checksum, verified.checksum)) {
+      throw new IOException("Arena changed since template preparation");
+    }
   }
 
   void prefault() {

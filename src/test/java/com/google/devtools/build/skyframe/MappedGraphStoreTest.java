@@ -190,6 +190,34 @@ public final class MappedGraphStoreTest {
   }
 
   @Test
+  public void restoreVerificationRejectsChangedArenaEvenWithValidNewChecksum() throws Exception {
+    complete();
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    graph.verifyBaseline();
+    Path file = graph.backingFile();
+    byte[] bytes = Files.readAllBytes(file);
+    var buffer = ByteBuffer.wrap(bytes);
+    int direct = (int) buffer.getLong(MappedGraphStore.HEADER_BYTES + 16);
+    int first = buffer.getInt(direct + 12);
+    buffer.putInt(direct + 12, buffer.getInt(direct + 16));
+    buffer.putInt(direct + 16, first);
+    rewriteChecksum(bytes);
+    Files.setPosixFilePermissions(
+        file,
+        java.util.Set.of(
+            java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+            java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
+    try (var channel =
+        java.nio.channels.FileChannel.open(file, java.nio.file.StandardOpenOption.WRITE)) {
+      var content = ByteBuffer.wrap(bytes);
+      while (content.hasRemaining()) {
+        channel.write(content);
+      }
+    }
+    assertThrows(IOException.class, graph::verifyBaseline);
+  }
+
+  @Test
   public void rejectsWrongGenerationRevisionOrJavaTables() throws Exception {
     complete();
     graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);

@@ -157,6 +157,12 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
     return store == null ? null : store.generation();
   }
 
+  public void verifyBaseline() throws IOException {
+    if (baseline instanceof MappedGraphStore mapped) {
+      mapped.verifyBackingFile();
+    }
+  }
+
   public void prefaultBaseline() {
     if (baseline instanceof MappedGraphStore mapped) {
       mapped.prefault();
