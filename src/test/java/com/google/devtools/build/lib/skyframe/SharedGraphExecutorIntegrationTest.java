@@ -22,6 +22,7 @@ import com.google.devtools.build.lib.analysis.util.BuildViewTestCase;
 import com.google.devtools.build.lib.vfs.PathFragment;
 import com.google.devtools.build.lib.vfs.Root;
 import com.google.devtools.build.lib.vfs.RootedPath;
+import com.google.devtools.build.skyframe.EvaluationContext;
 import com.google.devtools.build.skyframe.InMemoryGraphFactory;
 import com.google.devtools.build.skyframe.LayeredInMemoryGraph;
 import org.junit.Test;
@@ -56,12 +57,23 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
     assertThat(evaluator.getInMemoryGraph().getIfPresent(pending)).isNotNull();
     executor.setEventBus(new EventBus());
     executor.drainChangedFiles();
+    // Make an unrelated entry already dirty before freezing, using the normal invalidator.
+    executor.startIncrementalBuildMonitoring();
+    executor.getDifferencerForTesting().invalidate(ImmutableList.of(pending));
+    evaluator.evaluate(
+        ImmutableList.of(),
+        EvaluationContext.newBuilder()
+            .setKeepGoing(true)
+            .setParallelism(1)
+            .setEventHandler(reporter)
+            .build());
+    var dirtyEntry = evaluator.getInMemoryGraph().getIfPresent(pending);
+    assertThat(dirtyEntry.isDirty()).isTrue();
+    executor.drainChangedFiles();
     executor.noteSharedGraphCommandResult("build", true);
     var prepared = executor.sharedGraphOperation("prepare", "", "", "", reporter);
     scratch.overwriteFile("pkg/data.txt", "new");
     scratch.file("pkg/added.txt", "added");
-    // A queued invalidation can dirty an unrelated FileValue during empty-root reconciliation.
-    executor.getDifferencerForTesting().invalidate(ImmutableList.of(pending));
     var resumed =
         executor.sharedGraphOperation(
             "reconcile", "", "", (String) prepared.get("generation"), reporter);
@@ -69,7 +81,7 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
     assertThat((Integer) resumed.get("changed_nodes")).isGreaterThan(0);
     assertThat(executor.getEvaluator()).isSameInstanceAs(evaluator);
     // Reconciliation must retain unrelated dirty entries rather than deleting them.
-    assertThat(evaluator.getInMemoryGraph().getIfPresent(pending)).isNotNull();
+    assertThat(evaluator.getInMemoryGraph().getIfPresent(pending)).isSameInstanceAs(dirtyEntry);
     assertThat(evaluator.getInMemoryGraph().getIfPresent(pending).isDirty()).isTrue();
     update(ImmutableList.of("//pkg:files", "//other:files"), false, 1, true, new EventBus());
     assertThat(

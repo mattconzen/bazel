@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.google.devtools.build.skyframe;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.ImmutableList;
@@ -286,6 +287,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Override
   public synchronized DependencyState checkIfDoneForDirtyReverseDep(SkyKey reverseDep)
       throws InterruptedException {
+    checkNotNull(reverseDep, this);
     if (storage instanceof Frozen) {
       return DependencyState.DONE;
     }

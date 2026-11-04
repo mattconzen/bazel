@@ -113,6 +113,7 @@ public final class LayeredInMemoryGraphTest {
     freeze();
     assertThat(entry.addReverseDepAndCheckIfDone(null)).isEqualTo(DependencyState.DONE);
     assertThat(entry.checkIfDoneForDirtyReverseDep(parent)).isEqualTo(DependencyState.DONE);
+    assertThrows(NullPointerException.class, () -> entry.checkIfDoneForDirtyReverseDep(null));
     var reverseDeps = entry.getAllReverseDepsForNodeBeingDeleted();
     graph.remove(entry.getKey());
     assertThat(reverseDeps).containsExactly(parent);
