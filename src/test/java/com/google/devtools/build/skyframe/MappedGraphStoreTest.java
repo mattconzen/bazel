@@ -101,10 +101,29 @@ public final class MappedGraphStoreTest {
     var entry = complete();
     var compressed = new WeakReference<>(entry.getCompressedDirectDepsForDoneEntry());
     var delegate = oldStorage(entry);
-    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION, true);
     GcFinalization.awaitClear(compressed);
     GcFinalization.awaitClear(delegate);
+    var audit = graph.finishRetentionAudit();
+    assertThat(((java.util.Map<?, ?>) audit.get("direct_array")).get("surviving_references"))
+        .isEqualTo(0L);
+    assertThat(((java.util.Map<?, ?>) audit.get("native_delegate")).get("surviving_references"))
+        .isEqualTo(0L);
     assertThat(entry.getDoneDeps()).hasSize(2);
+  }
+
+  @Test
+  public void retentionAuditReportsAnExternallyRetainedArray() throws Exception {
+    var entry = complete();
+    Object held = entry.getCompressedDirectDepsForDoneEntry();
+    var delegate = oldStorage(entry);
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION, true);
+    GcFinalization.awaitClear(delegate);
+    var audit = graph.finishRetentionAudit();
+    assertThat(((java.util.Map<?, ?>) audit.get("direct_array")).get("surviving_references"))
+        .isEqualTo(1L);
+    java.lang.ref.Reference.reachabilityFence(held);
+    assertThat(graph.finishRetentionAudit()).isEmpty();
   }
 
   private static WeakReference<Object> oldStorage(LayeredNodeEntry entry) {

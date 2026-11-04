@@ -65,6 +65,14 @@ public final class SharedGraphCommand implements BlazeCommand {
         effectTags = {OptionEffectTag.BAZEL_INTERNAL_CONFIGURATION},
         help = "Expected prepared generation, required for reconciliation.")
     public abstract String getGeneration();
+
+    @Option(
+        name = "shared_graph_verify_retention",
+        defaultValue = "false",
+        documentationCategory = OptionDocumentationCategory.UNDOCUMENTED,
+        effectTags = {OptionEffectTag.BAZEL_INTERNAL_CONFIGURATION},
+        help = "Diagnostic weak-reference audit of replaced storage after template GC; perturbs sharing.")
+    public abstract boolean getVerifyRetention();
   }
 
   @Override
@@ -81,7 +89,8 @@ public final class SharedGraphCommand implements BlazeCommand {
               settings.getDirectory(),
               settings.getRevision(),
               settings.getGeneration(),
-              env.getReporter());
+              env.getReporter(),
+              settings.getVerifyRetention());
       env.getReporter()
           .getOutErr()
           .printOutLn(new com.google.gson.GsonBuilder().serializeNulls().create().toJson(status));

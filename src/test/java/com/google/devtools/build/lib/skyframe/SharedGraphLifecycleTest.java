@@ -148,6 +148,24 @@ public final class SharedGraphLifecycleTest {
   }
 
   @Test
+  public void verificationPassReusesBoundedBufferWithoutHashingStaleBytes() throws Exception {
+    var large = write("/work/a-large", "x".repeat(140_000));
+    var largeKey = track(large);
+    track(write("/work/b-small", "short"));
+    track(write("/work/c-empty", ""));
+    String generation = prepare();
+    var io = (java.util.Map<?, ?>) lifecycle.status().get("fingerprint_io");
+    var first = (java.util.Map<?, ?>) io.get("prepare_capture_first");
+    assertThat(first.get("regular_files")).isEqualTo(3L);
+    assertThat(first.get("buffer_bytes_allocated")).isEqualTo(65_536L);
+    assertThat(first.get("content_bytes_read")).isEqualTo(140_005L);
+    FileSystemUtils.writeContentAsLatin1(large, "x".repeat(65_537) + "y" + "x".repeat(74_462));
+    lifecycle.beginReconciliation(generation);
+    // Reusing the previous large file's buffer must not affect short/empty fingerprints.
+    assertThat(lifecycle.changedKeys()).containsExactly(largeKey);
+  }
+
+  @Test
   public void failedReconciliationStaysBlockedAndCanRetryOrDiscard() throws Exception {
     track(write("/work/file", "x"));
     String generation = prepare();

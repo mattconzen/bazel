@@ -30,6 +30,19 @@ passed; both arms failed the complete 768 MiB sustained-pressure profile.
 Retained-memory attribution, complete host accounting and durable host sharing
 remain unresolved. Keep the backend off by default.
 
+## Execution status
+
+The production target is four clones with a ten-minute lifetime, as specified
+by the user. [The experiment contract](docs/shared-graph/experiment-contract.md)
+fixes the comparison and [the evidence index](docs/shared-graph/obligation-evidence.md)
+tracks implemented checks, failed diagnostic attempts and unresolved gates.
+The measured first correction reuses fingerprint buffers; its source tests pass,
+and its allocation/host-memory effect still requires the pinned comparison.
+An opt-in real-graph weak-reference audit is implemented and tested, including
+a deliberately retained array that must be reported as surviving. Matched
+four-arm diagnostic collection is in progress. No acceptance gate is inferred
+from these implementation checkmarks.
+
 ## Execution rules and order
 
 - All PRs must target `github.com/mattconzen`. Use explicit `--repo` arguments.
@@ -57,16 +70,16 @@ remain unresolved. Keep the backend off by default.
 
 **Plan:** §§1, 8/PR0, 10, 12. **Owner:** both. **Depends on:** none.
 
-- [ ] Inventory existing code, tests, raw trials and reports against each plan
+- [x] Inventory existing code, tests, raw trials and reports against each plan
   requirement; distinguish implemented, demonstrated, failed and unmeasured.
 - [ ] Pin source, binaries, image, controller, Envoy revision, toolchains, JVM/GC,
   VM resources, guest paths, snapshot backing, cache warmth and KSM policy.
-- [ ] Define the representative related-branch workload, expected production
+- [x] Define the representative related-branch workload, expected production
   clone count and VM lifetime. State exactly which analysis, compilation and
   linking work is exercised; existing Envoy runs do not build the full executable.
 - [ ] Establish the current-protocol unmodified warmed control and its native
   source revision. Keep patched-off as a separate control and cold JVMs as context.
-- [ ] Predeclare repetitions, ordering, uncertainty estimates, constrained-run
+- [x] Predeclare repetitions, ordering, uncertainty estimates, constrained-run
   exclusions and the CPU/latency measurement scope. Keep the original 25% memory,
   5% CPU and 10% p95 targets unless an explicit evidence-based revision is recorded
   before the next acceptance comparison.
@@ -149,7 +162,7 @@ evaluated. A measurement limitation does not count as a passed gate.
 **Plan:** §§4–7, 8/PR0/PR3/PR4, 10. **Owner:** both.
 **Depends on:** SG-001; correlate with SG-002 and SG-004.
 
-- [ ] Split restore/reconciliation into arena validation, filesystem hashing,
+- [x] Split restore/reconciliation into arena validation, filesystem hashing,
   watcher/cache reset, differencer work and ordinary initialization phases.
 - [ ] Measure allocation, GC, residency and private-page growth per phase;
   explain the large anonymous charges observed before the first ordinary build.
@@ -169,7 +182,7 @@ alone is not evidence that restoration preserves physical sharing.
 **Plan:** §§4–7, 8/PR1–PR4. **Owner:** graph/runtime as appropriate.
 **Depends on:** SG-002 through SG-005 for the selected change.
 
-- [ ] Select one measured cost at a time and record its expected removable
+- [x] Select one measured cost at a time and record its expected removable
   bytes, semantic constraints and validation experiment before changing code.
 - [ ] Remove proven obsolete retention or unnecessary materialization; reduce
   fingerprint allocation or wrapper/read overhead only where evidence warrants.
@@ -189,18 +202,18 @@ does not authorize unrelated architectural redesign.
 **Plan:** §§3–5, 8/PR1/PR2, 9, 12. **Owner:** graph.
 **Depends on:** SG-001; revalidate affected cases after SG-006.
 
-- [ ] Map existing native/heap/mapped coverage for graph membership, batch
+- [x] Map existing native/heap/mapped coverage for graph membership, batch
   contracts, interning, versions, dirty/error values and stored event emission.
   Add only missing cases; preserve equal-value dependency replacement semantics.
-- [ ] Exercise concurrent promotion/signaling, DIRTY/CHANGE/REWIND transitions,
+- [x] Exercise concurrent promotion/signaling, DIRTY/CHANGE/REWIND transitions,
   deletion/recreation, cycles, cancellation and interrupted invalidation. Preserve
   reproducible seeds and traces for randomized tests.
-- [ ] Audit pruning, target counting, dump and serialization consumers for
+- [x] Audit pruning, target counting, dump and serialization consumers for
   concrete casts, destructive operations and hidden array reconstruction.
-- [ ] Close the source-version metadata gap: implement an exact completed-state
+- [x] Close the source-version metadata gap: implement an exact completed-state
   adapter where support is required. Until then, retain explicit rejection,
   document unsupported configurations and keep that preservation obligation open.
-- [ ] Verify current-code evidence for `SkyframeTests`, relevant node/evaluator/
+- [x] Verify current-code evidence for `SkyframeTests`, relevant node/evaluator/
   invalidator suites and the seven integration targets below. Ordinary passing
   native tests alone do not establish layered-backend coverage.
 

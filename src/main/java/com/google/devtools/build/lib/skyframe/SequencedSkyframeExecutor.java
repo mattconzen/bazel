@@ -258,12 +258,24 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       String generation,
       ExtendedEventHandler eventHandler)
       throws java.io.IOException, InterruptedException {
+    return sharedGraphOperation(operation, directory, revision, generation, eventHandler, false);
+  }
+
+  public java.util.Map<String, Object> sharedGraphOperation(
+      String operation,
+      String directory,
+      String revision,
+      String generation,
+      ExtendedEventHandler eventHandler,
+      boolean verifyRetention)
+      throws java.io.IOException, InterruptedException {
     switch (operation) {
       case "prepare" -> {
         if (!trackIncrementalState) {
           throw new IllegalStateException("Shared graph preparation requires incremental state");
         }
-        sharedGraphLifecycle.prepare(memoizingEvaluator.getInMemoryGraph(), directory, revision);
+        sharedGraphLifecycle.prepare(
+            memoizingEvaluator.getInMemoryGraph(), directory, revision, verifyRetention);
       }
       case "reconcile" -> {
         sharedGraphLifecycle.beginReconciliation(generation);

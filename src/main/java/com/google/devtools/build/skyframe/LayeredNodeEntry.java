@@ -86,6 +86,17 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
     return storage instanceof Frozen;
   }
 
+  synchronized void trackFreezeRetention(LayeredInMemoryGraph.RetentionAudit audit) {
+    var entry = ((Mutable) storage).entry();
+    audit.track("native_delegate", entry);
+    if (entry.directDeps instanceof Object[] array && array.length > 0) {
+      audit.track("direct_array", array);
+    }
+    if (entry.reverseDeps instanceof Collection<?> collection && collection.size() > 1) {
+      audit.track("reverse_container", collection);
+    }
+  }
+
   private IncrementalInMemoryNodeEntry mutable(String reason) {
     if (storage instanceof Mutable mutable) {
       return mutable.entry();

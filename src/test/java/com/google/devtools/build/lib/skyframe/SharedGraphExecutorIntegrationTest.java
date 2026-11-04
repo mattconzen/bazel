@@ -25,16 +25,22 @@ import com.google.devtools.build.lib.vfs.RootedPath;
 import com.google.devtools.build.skyframe.EvaluationContext;
 import com.google.devtools.build.skyframe.InMemoryGraphFactory;
 import com.google.devtools.build.skyframe.LayeredInMemoryGraph;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 /** Runs real executor reconciliation after ordinary command-local monitors have been drained. */
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase {
+  @TestParameter({"heap", "mapped"}) private String mode;
+  @Rule public final TemporaryFolder arena = new TemporaryFolder();
+
   @Override
   protected String getSharedGraphMode() {
-    return "heap";
+    return mode;
   }
 
   @Override
@@ -71,7 +77,13 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
     assertThat(dirtyEntry.isDirty()).isTrue();
     executor.drainChangedFiles();
     executor.noteSharedGraphCommandResult("build", true);
-    var prepared = executor.sharedGraphOperation("prepare", "", "", "", reporter);
+    var prepared =
+        executor.sharedGraphOperation(
+            "prepare",
+            mode.equals("mapped") ? arena.newFolder().getAbsolutePath() : "",
+            "0123456789abcdef0123456789abcdef01234567",
+            "",
+            reporter);
     var preparedStatus = executor.sharedGraphOperation("status", "", "", "", reporter);
     assertThat(preparedStatus.get("state")).isEqualTo("PREPARED");
     assertThat(preparedStatus.get("nodes")).isEqualTo(prepared.get("nodes"));

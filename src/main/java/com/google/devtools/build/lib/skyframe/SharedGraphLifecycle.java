@@ -68,6 +68,29 @@ final class SharedGraphLifecycle {
   private ImmutableList<Map<String, String>> changedObservations = ImmutableList.of();
   private ImmutableList<Observation> observations = ImmutableList.of();
   private final Map<String, Map<String, Long>> phaseMetrics = new LinkedHashMap<>();
+  private final Map<String, Map<String, Long>> fingerprintIo = new LinkedHashMap<>();
+  private Map<String, Object> retentionAudit = Map.of();
+
+  /** One scratch buffer per excluded verification pass, including recursive output trees. */
+  private static final class FingerprintContext {
+    private byte[] chunk;
+    private long regularFiles;
+    private long contentBytes;
+
+    byte[] buffer() {
+      if (chunk == null) {
+        chunk = new byte[64 * 1024];
+      }
+      return chunk;
+    }
+
+    Map<String, Long> metrics() {
+      return Map.of(
+          "regular_files", regularFiles,
+          "content_bytes_read", contentBytes,
+          "buffer_bytes_allocated", chunk == null ? 0L : (long) chunk.length);
+    }
+  }
 
   /** Aggregate command-thread diagnostics; never traverses or writes frozen node records. */
   final class Phase implements AutoCloseable {
@@ -153,6 +176,11 @@ final class SharedGraphLifecycle {
 
   void prepare(InMemoryGraph graph, String directory, String revision)
       throws IOException, InterruptedException {
+    prepare(graph, directory, revision, false);
+  }
+
+  void prepare(InMemoryGraph graph, String directory, String revision, boolean verifyRetention)
+      throws IOException, InterruptedException {
     checkState(
         enabled() && graph instanceof LayeredInMemoryGraph, "Shared graph backend is disabled");
     checkState(
@@ -161,13 +189,14 @@ final class SharedGraphLifecycle {
     // The controller must hold filesystem/workload exclusion continuously from that build through
     // snapshot publication. Re-read fingerprints to reject a filesystem changing during capture.
     phaseMetrics.clear();
+    fingerprintIo.clear();
     ImmutableList<Observation> staged;
     ImmutableList<Observation> second;
     try (var phase = phase("prepare_capture_first")) {
-      staged = capture(graph);
+      staged = capture(graph, "prepare_capture_first");
     }
     try (var phase = phase("prepare_capture_verify")) {
-      second = capture(graph);
+      second = capture(graph, "prepare_capture_verify");
     }
     checkState(staged.size() == second.size(), "Graph changed during preparation");
     for (int i = 0; i < staged.size(); i++) {
@@ -184,11 +213,13 @@ final class SharedGraphLifecycle {
           !directory.isEmpty() && java.nio.file.Path.of(directory).isAbsolute(),
           "Mapped preparation requires an absolute arena directory");
       try (var phase = phase("prepare_freeze")) {
-        id = layered.freezeMappedAtQuiescentBoundary(java.nio.file.Path.of(directory), revision);
+        id =
+            layered.freezeMappedAtQuiescentBoundary(
+                java.nio.file.Path.of(directory), revision, verifyRetention);
       }
     } else {
       try (var phase = phase("prepare_freeze")) {
-        id = layered.freezeAtQuiescentBoundary();
+        id = layered.freezeAtQuiescentBoundary(verifyRetention);
       }
     }
     observations = staged;
@@ -201,12 +232,27 @@ final class SharedGraphLifecycle {
     try (var phase = phase("prepare_gc")) {
       System.gc();
     }
+    if (verifyRetention) {
+      try (var phase = phase("prepare_retention_audit")) {
+        retentionAudit = layered.finishRetentionAudit();
+      }
+    }
     try (var phase = phase("prepare_prefault")) {
       layered.prefaultBaseline();
     }
   }
 
-  private static ImmutableList<Observation> capture(InMemoryGraph graph)
+  private ImmutableList<Observation> capture(InMemoryGraph graph, String phase)
+      throws IOException, InterruptedException {
+    var context = new FingerprintContext();
+    try {
+      return capture(graph, context);
+    } finally {
+      fingerprintIo.put(phase, context.metrics());
+    }
+  }
+
+  private static ImmutableList<Observation> capture(InMemoryGraph graph, FingerprintContext context)
       throws IOException, InterruptedException {
     var records = ImmutableList.<Observation>builder();
     var cache = new HashMap<Location, byte[]>();
@@ -219,17 +265,17 @@ final class SharedGraphLifecycle {
       checkInterrupted();
       SkyKey key = entry.getKey();
       if (key instanceof FileStateKey file) {
-        observe(records, cache, key, file.argument().asPath(), ObservationKind.FILE_STATE);
+        observe(records, cache, key, file.argument().asPath(), ObservationKind.FILE_STATE, context);
       } else if (key.functionName().equals(SkyFunctions.DIRECTORY_LISTING_STATE)
           && key.argument() instanceof RootedPath path) {
-        observe(records, cache, key, path.asPath(), ObservationKind.DIRECTORY_LISTING);
+        observe(records, cache, key, path.asPath(), ObservationKind.DIRECTORY_LISTING, context);
       }
       if (entry.isDone() && entry.getValue() instanceof ActionExecutionValue action) {
         for (var artifact : action.getAllFileValues().keySet()) {
-          observe(records, cache, key, artifact.getPath(), ObservationKind.OUTPUT);
+          observe(records, cache, key, artifact.getPath(), ObservationKind.OUTPUT, context);
         }
         for (var artifact : action.getAllTreeArtifactValues().keySet()) {
-          observe(records, cache, key, artifact.getPath(), ObservationKind.TREE_OUTPUT);
+          observe(records, cache, key, artifact.getPath(), ObservationKind.TREE_OUTPUT, context);
         }
       }
     }
@@ -241,22 +287,26 @@ final class SharedGraphLifecycle {
       Map<Location, byte[]> cache,
       SkyKey key,
       Path path,
-      ObservationKind kind)
+      ObservationKind kind,
+      FingerprintContext context)
       throws IOException, InterruptedException {
     var location = new Location(path, kind);
     byte[] value = cache.get(location);
     if (value == null) {
-      value = fingerprint(path, kind);
+      value = fingerprint(path, kind, context);
       cache.put(location, value);
     }
     records.add(new Observation(key, path, kind, value));
   }
 
   static byte[] fingerprint(Path path, boolean recursive) throws IOException, InterruptedException {
-    return fingerprint(path, recursive ? ObservationKind.TREE_OUTPUT : ObservationKind.OUTPUT);
+    return fingerprint(
+        path,
+        recursive ? ObservationKind.TREE_OUTPUT : ObservationKind.OUTPUT,
+        new FingerprintContext());
   }
 
-  private static byte[] fingerprint(Path path, ObservationKind kind)
+  private static byte[] fingerprint(Path path, ObservationKind kind, FingerprintContext context)
       throws IOException, InterruptedException {
     checkInterrupted();
     MessageDigest digest;
@@ -302,18 +352,21 @@ final class SharedGraphLifecycle {
         digest.update(entry.getType().toString().getBytes(StandardCharsets.UTF_8));
         digest.update((byte) 0);
         if (kind == ObservationKind.TREE_OUTPUT) {
-          digest.update(fingerprint(path.getChild(entry.getName()), true));
+          digest.update(
+              fingerprint(path.getChild(entry.getName()), ObservationKind.TREE_OUTPUT, context));
         }
       }
     } else if (stat.isFile() && !stat.isSpecialFile()) {
       digest.update((byte) 3);
       digest.update(Long.toString(stat.getSize()).getBytes(StandardCharsets.UTF_8));
       try (var input = path.getInputStream()) {
-        byte[] chunk = new byte[64 * 1024];
+        context.regularFiles++;
+        byte[] chunk = context.buffer();
         int count;
         while ((count = input.read(chunk)) != -1) {
           checkInterrupted();
           digest.update(chunk, 0, count);
+          context.contentBytes += count;
         }
       }
     } else {
@@ -332,6 +385,16 @@ final class SharedGraphLifecycle {
   }
 
   ImmutableSet<SkyKey> changedKeys() throws IOException, InterruptedException {
+    var context = new FingerprintContext();
+    try {
+      return changedKeys(context);
+    } finally {
+      fingerprintIo.put("reconcile_fingerprints", context.metrics());
+    }
+  }
+
+  private ImmutableSet<SkyKey> changedKeys(FingerprintContext context)
+      throws IOException, InterruptedException {
     checkState(state == State.RECONCILING);
     var changed = ImmutableSet.<SkyKey>builder();
     var details = ImmutableList.<Map<String, String>>builder();
@@ -342,7 +405,7 @@ final class SharedGraphLifecycle {
       var location = new Location(observation.path(), observation.kind());
       byte[] actual = cache.get(location);
       if (actual == null) {
-        actual = fingerprint(location.path(), location.kind());
+        actual = fingerprint(location.path(), location.kind(), context);
         cache.put(location, actual);
       }
       if (!Arrays.equals(actual, observation.fingerprint())) {
@@ -407,6 +470,14 @@ final class SharedGraphLifecycle {
     status.put("fallback", fallback);
     status.put("failure", failure);
     status.put("phase_metrics", new LinkedHashMap<>(phaseMetrics));
+    status.put("fingerprint_io", new LinkedHashMap<>(fingerprintIo));
+    status.put("retention_audit", retentionAudit);
+    status.put(
+        "retention_audit_scope",
+        "Opt-in post-GC weak-reference counts for successfully frozen nodes."
+            + " Excludes singleton keys and empty global storage. Heap baselines intentionally"
+            + " retain dependency storage. Diagnostic references are discarded after sampling;"
+            + " these runs cannot establish performance or physical sharing.");
     status.put(
         "phase_metrics_scope",
         "Wall time and command-thread allocation (-1 if unavailable); heap used and GC are JVM-wide."

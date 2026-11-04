@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.build.lib.concurrent.ThreadSafety.ThreadHostile;
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -39,6 +40,48 @@ import javax.annotation.Nullable;
  * This class is not yet connected to a template command or to whole-VM restore reconciliation.
  */
 public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
+  /** Opt-in diagnostic roots. Weak references never keep the storage under audit alive. */
+  static final class RetentionAudit {
+    private final java.util.Map<String, java.util.List<WeakReference<Object>>> references =
+        new java.util.LinkedHashMap<>();
+
+    void track(String kind, Object value) {
+      references.computeIfAbsent(kind, ignored -> new ArrayList<>()).add(new WeakReference<>(value));
+    }
+
+    java.util.Map<String, Object> finish() {
+      var result = new java.util.LinkedHashMap<String, Object>();
+      references.forEach(
+          (kind, refs) -> {
+            long live = 0;
+            var classes = new java.util.TreeMap<String, Long>();
+            for (var reference : refs) {
+              Object value = reference.get();
+              if (value != null) {
+                live++;
+                classes.merge(value.getClass().getName(), 1L, Long::sum);
+              }
+            }
+            result.put(
+                kind,
+                java.util.Map.of(
+                    "tracked_references", (long) refs.size(),
+                    "surviving_references", live,
+                    "surviving_classes", classes));
+          });
+      references.clear();
+      return result;
+    }
+  }
+
+  @Nullable private RetentionAudit retentionAudit;
+
+  /** Call after diagnostic template GC; returned counts contain no original storage references. */
+  public java.util.Map<String, Object> finishRetentionAudit() {
+    var audit = retentionAudit;
+    retentionAudit = null;
+    return audit == null ? java.util.Map.of() : audit.finish();
+  }
   public static final InMemoryGraphFactory FACTORY =
       (keepEdges, pooledInterning) -> {
         checkArgument(keepEdges, "Layered graphs require retained incremental state");
@@ -78,8 +121,13 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
    */
   @ThreadHostile
   public UUID freezeAtQuiescentBoundary() throws InterruptedException {
+    return freezeAtQuiescentBoundary(false);
+  }
+
+  @ThreadHostile
+  public UUID freezeAtQuiescentBoundary(boolean verifyRetention) throws InterruptedException {
     try {
-      return freezeAtQuiescentBoundary(null, null);
+      return freezeAtQuiescentBoundary(null, null, verifyRetention);
     } catch (IOException impossible) {
       throw new AssertionError(impossible);
     }
@@ -89,12 +137,21 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
   @ThreadHostile
   public UUID freezeMappedAtQuiescentBoundary(Path directory, String bazelRevision)
       throws IOException, InterruptedException {
-    return freezeAtQuiescentBoundary(directory, bazelRevision);
+    return freezeMappedAtQuiescentBoundary(directory, bazelRevision, false);
   }
 
-  private UUID freezeAtQuiescentBoundary(@Nullable Path directory, @Nullable String bazelRevision)
+  @ThreadHostile
+  public UUID freezeMappedAtQuiescentBoundary(
+      Path directory, String bazelRevision, boolean verifyRetention)
+      throws IOException, InterruptedException {
+    return freezeAtQuiescentBoundary(directory, bazelRevision, verifyRetention);
+  }
+
+  private UUID freezeAtQuiescentBoundary(
+      @Nullable Path directory, @Nullable String bazelRevision, boolean verifyRetention)
       throws IOException, InterruptedException {
     checkState(!hasFrozen, "One frozen generation is supported per graph lifetime");
+    var audit = verifyRetention ? new RetentionAudit() : null;
     var candidates = new ArrayList<LayeredNodeEntry.FreezeCandidate>();
     for (var node : nodeMap.values()) {
       if (Thread.interrupted()) {
@@ -102,6 +159,10 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
       }
       var candidate = ((LayeredNodeEntry) node).stageFreeze();
       if (candidate != null) {
+        if (audit != null) {
+          ((LayeredNodeEntry) node).trackFreezeRetention(audit);
+          audit.track("direct_reader", candidate.record().directDeps());
+        }
         candidates.add(candidate);
       }
     }
@@ -148,6 +209,7 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
     }
     baseline = store;
     hasFrozen = true;
+    retentionAudit = audit;
     return store.generation();
   }
 
