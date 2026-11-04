@@ -697,10 +697,17 @@ public class BlazeCommandDispatcher implements CommandDispatcher {
         return result;
       }
 
-      for (BlazeModule module : runtime.getBlazeModules()) {
-        try (SilentCloseable closeable =
-            Profiler.instance().profile(module + ".injectExtraPrecomputedValues")) {
-          env.getSkyframeExecutor().injectExtraPrecomputedValues(module.getPrecomputedValues());
+      // Lifecycle operations validate the already-warmed evaluator, rather than loading a new
+      // build configuration. Injecting this command's default repository options (for example,
+      // lockfile mode or allowed yanked versions) would dirty the prepared module graph when
+      // reconciliation drains the differencer. Preserve ordinary module setup/cleanup, and let
+      // the next real command inject its actual options through the normal path.
+      if (!commandName.equals("shared_graph")) {
+        for (BlazeModule module : runtime.getBlazeModules()) {
+          try (SilentCloseable closeable =
+              Profiler.instance().profile(module + ".injectExtraPrecomputedValues")) {
+            env.getSkyframeExecutor().injectExtraPrecomputedValues(module.getPrecomputedValues());
+          }
         }
       }
 

@@ -120,3 +120,11 @@ These changes address measured reuse risks; they do not establish host memory sa
 reasons, dependency IDs and copied mapped bytes. These counter reads do not scan
 node handles and remain available while the generation is prepared. Full graph
 dumps remain excluded by the prepared command barrier.
+
+Lifecycle commands preserve the warmed evaluator's module precomputed inputs.
+They still run ordinary module setup and cleanup, but do not inject a new build
+configuration from their default command options. Otherwise a generation analyzed
+with non-default repository flags (for example `--lockfile_mode=error` and an
+explicit `--allow_yanked_versions`) can be invalidated during unchanged-filesystem
+reconciliation by the lifecycle command's defaults. The next ordinary command
+injects its actual options normally, including legitimate configuration changes.

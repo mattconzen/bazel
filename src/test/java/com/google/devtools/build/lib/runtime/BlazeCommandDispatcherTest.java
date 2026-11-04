@@ -43,6 +43,7 @@ import com.google.devtools.build.lib.server.FailureDetails.BuildProgress.Code;
 import com.google.devtools.build.lib.server.FailureDetails.Crash;
 import com.google.devtools.build.lib.server.FailureDetails.FailureDetail;
 import com.google.devtools.build.lib.server.FailureDetails.Spawn;
+import com.google.devtools.build.lib.skyframe.PrecomputedValue;
 import com.google.devtools.build.lib.testutil.MoreAsserts;
 import com.google.devtools.build.lib.testutil.Scratch;
 import com.google.devtools.build.lib.testutil.TestConstants;
@@ -69,6 +70,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.junit.After;
@@ -138,11 +140,8 @@ public final class BlazeCommandDispatcherTest {
     this.runtime = builder.build();
 
     BlazeDirectories directories =
-        new BlazeDirectories(
-            serverDirectories,
-            scratch.dir("scratch"),
-            productName);
-    runtime.initWorkspace(directories, /*binTools=*/null);
+        new BlazeDirectories(serverDirectories, scratch.dir("scratch"), productName);
+    runtime.initWorkspace(directories, /* binTools= */ null);
     errorOnAfterCommand = null;
   }
 
@@ -183,8 +182,11 @@ public final class BlazeCommandDispatcherTest {
     public abstract String getStderr();
   }
 
-  @Command(name = "foo", options = {FooOptions.class},
-           shortDescription = "", help = "")
+  @Command(
+      name = "foo",
+      options = {FooOptions.class},
+      shortDescription = "",
+      help = "")
   private static class FooCommand implements BlazeCommand {
 
     @Override
@@ -201,7 +203,6 @@ public final class BlazeCommandDispatcherTest {
                 .build());
       }
     }
-
   }
 
   @Command(name = "bar", shortDescription = "", help = "")
@@ -212,7 +213,6 @@ public final class BlazeCommandDispatcherTest {
       env.getReporter().getOutErr().printOut("Hello, bar.\n");
       return BlazeCommandResult.success();
     }
-
   }
 
   private abstract static class AnsiTestingCommand implements BlazeCommand {
@@ -234,7 +234,6 @@ public final class BlazeCommandDispatcherTest {
 
       return BlazeCommandResult.success();
     }
-
   }
 
   @Command(name = "binary", binaryStdOut = true, shortDescription = "", help = "")
@@ -251,8 +250,10 @@ public final class BlazeCommandDispatcherTest {
   public void testOutErrorAndExitStatus() throws Exception {
     runtime.overrideCommands(ImmutableList.of(foo));
     BlazeCommandDispatcher dispatch = new BlazeCommandDispatcher(runtime);
-    String[] args = {"foo", "--stdout=Hello, out.",
-                     "--stderr=Hello, err.", "--success=false"};
+    String[] args = {
+      "foo", "--stdout=Hello, out.",
+      "--stderr=Hello, err.", "--success=false"
+    };
     BlazeCommandResult result = dispatch.exec(Arrays.asList(args), "test", outErr);
     assertThat(outErr.outAsLatin1()).endsWith("Hello, out.");
     assertThat(outErr.errAsLatin1()).endsWith("Hello, err.");
@@ -397,7 +398,7 @@ public final class BlazeCommandDispatcherTest {
   public void testClientEnv() throws Exception {
     runtime.overrideCommands(ImmutableList.of(foo));
     BlazeCommandDispatcher dispatch = new BlazeCommandDispatcher(runtime);
-    String[] args = {"foo", "--client_env=V1=val1", "--client_env=V2=",  "--client_env=V3=val3"};
+    String[] args = {"foo", "--client_env=V1=val1", "--client_env=V2=", "--client_env=V3=val3"};
     dispatch.exec(Arrays.asList(args), "test", outErr);
     assertThat(clientEnv).containsExactly("V1", "val1", "V2", "", "V3", "val3");
   }
@@ -428,6 +429,51 @@ public final class BlazeCommandDispatcherTest {
     assertThat(result.getExitCode()).isEqualTo(ExitCode.TRANSIENT_BUILD_EVENT_SERVICE_UPLOAD_ERROR);
     assertThat(result.getDetailedExitCode()).isEqualTo(detailedExitCode);
     assertThat(outErr.errAsLatin1()).contains("afterCommandError");
+  }
+
+  @Command(name = "shared_graph", shortDescription = "", help = "")
+  private static class LifecycleCommand implements BlazeCommand {
+    @Override
+    public BlazeCommandResult exec(CommandEnvironment env, OptionsParsingResult options) {
+      return BlazeCommandResult.success();
+    }
+  }
+
+  @Test
+  public void lifecycleCommandPreservesPrecomputedInputsButRunsModuleHooks() throws Exception {
+    var injections = new AtomicInteger();
+    var starts = new AtomicInteger();
+    var finishes = new AtomicInteger();
+    initializeRuntimeInternal(
+        new BlazeModule() {
+          @Override
+          public void beforeCommand(CommandEnvironment env) {
+            starts.incrementAndGet();
+          }
+
+          @Override
+          public void afterCommand() {
+            finishes.incrementAndGet();
+          }
+
+          @Override
+          public ImmutableList<PrecomputedValue.Injected> getPrecomputedValues() {
+            injections.incrementAndGet();
+            return ImmutableList.of();
+          }
+        });
+    runtime.overrideCommands(ImmutableList.of(new LifecycleCommand(), foo));
+    BlazeCommandDispatcher dispatch = new BlazeCommandDispatcher(runtime);
+    assertThat(dispatch.exec(asList("shared_graph"), "test", outErr).getExitCode())
+        .isEqualTo(ExitCode.SUCCESS);
+    assertThat(starts.get()).isEqualTo(1);
+    assertThat(finishes.get()).isEqualTo(1);
+    assertThat(injections.get()).isEqualTo(0);
+    assertThat(dispatch.exec(asList("foo"), "test", outErr).getExitCode())
+        .isEqualTo(ExitCode.SUCCESS);
+    assertThat(injections.get()).isEqualTo(1);
+    assertThat(starts.get()).isEqualTo(2);
+    assertThat(finishes.get()).isEqualTo(2);
   }
 
   @Test
@@ -472,7 +518,7 @@ public final class BlazeCommandDispatcherTest {
   public void testConcurrentCommandsWaitForLock() throws Exception {
     BlockCommand blockCommand = new BlockCommand();
     runtime.overrideCommands(ImmutableList.of(bar, blockCommand));
-    BlazeCommandDispatcher dispatch = new BlazeCommandDispatcher(runtime, /*serverPid=*/ 42);
+    BlazeCommandDispatcher dispatch = new BlazeCommandDispatcher(runtime, /* serverPid= */ 42);
 
     Thread blockCommandThread =
         new TestThread(
@@ -581,7 +627,6 @@ public final class BlazeCommandDispatcherTest {
         env.getReporter().getOutErr().printOutLn("This is the help message.");
         return BlazeCommandResult.success();
       }
-
     }
     runtime.overrideCommands(ImmutableList.of(new HelpCommand()));
     BlazeCommandDispatcher dispatch = new BlazeCommandDispatcher(runtime);
@@ -625,8 +670,8 @@ public final class BlazeCommandDispatcherTest {
   public void testIllegalOptions() throws Exception {
     runtime.overrideCommands(ImmutableList.of(foo));
     BlazeCommandDispatcher dispatch = new BlazeCommandDispatcher(runtime);
-    BlazeCommandResult result = dispatch.exec(
-        asList("foo", "--not_a_valid_option"), "test", outErr);
+    BlazeCommandResult result =
+        dispatch.exec(asList("foo", "--not_a_valid_option"), "test", outErr);
     assertThat(result.getExitCode()).isEqualTo(ExitCode.COMMAND_LINE_ERROR);
   }
 
@@ -671,13 +716,12 @@ public final class BlazeCommandDispatcherTest {
     final String ansiEscapedString = AnsiTestingCommand.ANSI_CODE;
 
     // Binary commands do not remove ANSI control codes.
-    BlazeCommandResult result = dispatch.exec(
-        asList("binary", "--color=no"), "test", outErr);
+    BlazeCommandResult result = dispatch.exec(asList("binary", "--color=no"), "test", outErr);
     String out = outErr.outAsLatin1();
     String err = outErr.errAsLatin1();
 
-    MoreAsserts.assertExitCode(ExitCode.SUCCESS.getNumericExitCode(),
-        result.getExitCode().getNumericExitCode(), out, err);
+    MoreAsserts.assertExitCode(
+        ExitCode.SUCCESS.getNumericExitCode(), result.getExitCode().getNumericExitCode(), out, err);
     assertThat(out).contains(ansiEscapedString);
   }
 
@@ -689,13 +733,12 @@ public final class BlazeCommandDispatcherTest {
     final String ansiEscapedString = AnsiTestingCommand.ANSI_CODE;
 
     // ASCII commands remove ANSI control codes.
-    BlazeCommandResult result = dispatch.exec(asList("ascii", "--color=no"),
-        "test", outErr);
+    BlazeCommandResult result = dispatch.exec(asList("ascii", "--color=no"), "test", outErr);
     String out = outErr.outAsLatin1();
     String err = outErr.errAsLatin1();
 
-    MoreAsserts.assertExitCode(ExitCode.SUCCESS.getNumericExitCode(),
-        result.getExitCode().getNumericExitCode(), out, err);
+    MoreAsserts.assertExitCode(
+        ExitCode.SUCCESS.getNumericExitCode(), result.getExitCode().getNumericExitCode(), out, err);
     assertThat(out).doesNotContain(ansiEscapedString);
   }
 
@@ -871,10 +914,7 @@ public final class BlazeCommandDispatcherTest {
         .contains("Config value 'UNDEFINED_CONFIG_VALUE' is not defined in any .rc file");
   }
 
-  @Command(
-      name = "testcommand",
-      shortDescription = "",
-      help = "")
+  @Command(name = "testcommand", shortDescription = "", help = "")
   private static class CommandCompleteRecordingCommand implements BlazeCommand {
 
     private final SettableFuture<CommandCompleteEvent> commandCompleteEvent =
