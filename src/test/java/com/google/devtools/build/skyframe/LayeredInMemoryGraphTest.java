@@ -106,6 +106,21 @@ public final class LayeredInMemoryGraphTest {
   }
 
   @Test
+  public void completedReadAndDeletionAccessorsDoNotPromote() throws Exception {
+    var entry = complete("a");
+    var parent = GraphTester.skyKey("parent");
+    entry.addReverseDepAndCheckIfDone(parent);
+    freeze();
+    assertThat(entry.addReverseDepAndCheckIfDone(null)).isEqualTo(DependencyState.DONE);
+    assertThat(entry.checkIfDoneForDirtyReverseDep(parent)).isEqualTo(DependencyState.DONE);
+    var reverseDeps = entry.getAllReverseDepsForNodeBeingDeleted();
+    graph.remove(entry.getKey());
+    assertThat(reverseDeps).containsExactly(parent);
+    assertThat(entry.isFrozen()).isTrue();
+    assertThat(graph.promotionsByReason()).isEmpty();
+  }
+
+  @Test
   public void deleteAndRecreateNeverRestoresBaseline() throws Exception {
     var old = complete("a");
     var key = old.getKey();

@@ -99,3 +99,19 @@ budget, automatic replay after runtime invariant failures, or canary readiness.
 Those remain measurement and operational gates in the implementation plan.
 
 Restore also revalidates the mapped arena against the checksum retained by the warmed JVM before reading dependency vectors. Rewriting both arena contents and its on-disk checksum does not bypass this comparison. Reconciliation initializes the ordinary incremental file monitor before flushing pending invalidations, retaining the existing evaluator and version clock.
+
+## Reuse diagnostics and native invalidation
+
+Reconciliation now submits changed observations to the recording differencer rather
+than deleting their reverse closure. This preserves previous values for ordinary
+change pruning and retains unrelated dirty nodes. Directory file state is type-only,
+matching native `FileStateValue`; directory listings separately observe child names
+and types. Observation caches include the observation kind, so these contracts cannot
+reuse each other's fingerprints. Regular files still include content checks, including
+equal-size/equal-mtime edits, and executed outputs remain observed.
+
+Status includes up to 256 `changed_observations` entries with exact key, path,
+observation kind and old/new SHA-256 fingerprints. These are diagnostics rather than
+an exhaustive filesystem diff. Completed frozen nodes do not promote for null-parent
+DONE checks, dirty-parent DONE checks, or consolidated reverse-edge reads on deletion.
+These changes address measured reuse risks; they do not establish host memory savings.

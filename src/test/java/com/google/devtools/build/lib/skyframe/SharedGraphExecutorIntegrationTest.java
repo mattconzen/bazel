@@ -68,6 +68,9 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
     assertThat(resumed.get("state")).isEqualTo("READY");
     assertThat((Integer) resumed.get("changed_nodes")).isGreaterThan(0);
     assertThat(executor.getEvaluator()).isSameInstanceAs(evaluator);
+    // Reconciliation must retain unrelated dirty entries rather than deleting them.
+    assertThat(evaluator.getInMemoryGraph().getIfPresent(pending)).isNotNull();
+    assertThat(evaluator.getInMemoryGraph().getIfPresent(pending).isDirty()).isTrue();
     update(ImmutableList.of("//pkg:files", "//other:files"), false, 1, true, new EventBus());
     assertThat(
             getFilesToBuild(getConfiguredTarget("//pkg:files")).toList().stream()

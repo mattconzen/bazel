@@ -43,9 +43,16 @@ final class SharedGraphLifecycle {
     RECONCILING
   }
 
-  private record Observation(SkyKey key, Path path, boolean recursive, byte[] fingerprint) {}
+  private enum ObservationKind {
+    FILE_STATE,
+    DIRECTORY_LISTING,
+    OUTPUT,
+    TREE_OUTPUT
+  }
 
-  private record Location(Path path, boolean recursive) {}
+  private record Observation(SkyKey key, Path path, ObservationKind kind, byte[] fingerprint) {}
+
+  private record Location(Path path, ObservationKind kind) {}
 
   private final String mode;
   private State state = State.READY;
@@ -57,6 +64,7 @@ final class SharedGraphLifecycle {
   private long mappedBytes;
   private long reconciliationNanos;
   private int changedNodes;
+  private ImmutableList<Map<String, String>> changedObservations = ImmutableList.of();
   private ImmutableList<Observation> observations = ImmutableList.of();
 
   SharedGraphLifecycle(String mode) {
@@ -138,17 +146,17 @@ final class SharedGraphLifecycle {
       checkInterrupted();
       SkyKey key = entry.getKey();
       if (key instanceof FileStateKey file) {
-        observe(records, cache, key, file.argument().asPath(), false);
+        observe(records, cache, key, file.argument().asPath(), ObservationKind.FILE_STATE);
       } else if (key.functionName().equals(SkyFunctions.DIRECTORY_LISTING_STATE)
           && key.argument() instanceof RootedPath path) {
-        observe(records, cache, key, path.asPath(), false);
+        observe(records, cache, key, path.asPath(), ObservationKind.DIRECTORY_LISTING);
       }
       if (entry.isDone() && entry.getValue() instanceof ActionExecutionValue action) {
         for (var artifact : action.getAllFileValues().keySet()) {
-          observe(records, cache, key, artifact.getPath(), false);
+          observe(records, cache, key, artifact.getPath(), ObservationKind.OUTPUT);
         }
         for (var artifact : action.getAllTreeArtifactValues().keySet()) {
-          observe(records, cache, key, artifact.getPath(), true);
+          observe(records, cache, key, artifact.getPath(), ObservationKind.TREE_OUTPUT);
         }
       }
     }
@@ -160,18 +168,23 @@ final class SharedGraphLifecycle {
       Map<Location, byte[]> cache,
       SkyKey key,
       Path path,
-      boolean recursive)
+      ObservationKind kind)
       throws IOException, InterruptedException {
-    var location = new Location(path, recursive);
+    var location = new Location(path, kind);
     byte[] value = cache.get(location);
     if (value == null) {
-      value = fingerprint(path, recursive);
+      value = fingerprint(path, kind);
       cache.put(location, value);
     }
-    records.add(new Observation(key, path, recursive, value));
+    records.add(new Observation(key, path, kind, value));
   }
 
   static byte[] fingerprint(Path path, boolean recursive) throws IOException, InterruptedException {
+    return fingerprint(path, recursive ? ObservationKind.TREE_OUTPUT : ObservationKind.OUTPUT);
+  }
+
+  private static byte[] fingerprint(Path path, ObservationKind kind)
+      throws IOException, InterruptedException {
     checkInterrupted();
     MessageDigest digest;
     try {
@@ -183,16 +196,23 @@ final class SharedGraphLifecycle {
     if (stat == null) {
       return digest.digest(new byte[] {0});
     }
-    digest.update(
-        (stat.getNodeId()
-                + ":"
-                + stat.getLastModifiedTimeNanos()
-                + ":"
-                + stat.getLastChangeTimeNanos()
-                + ":"
-                + stat.getPermissions()
-                + ":")
-            .getBytes(StandardCharsets.UTF_8));
+    // Native directory FileStateValue equality is type-only. Listing membership belongs to a
+    // separate key; neither observation should change merely because directory metadata changed.
+    if (stat.isDirectory() && kind == ObservationKind.FILE_STATE) {
+      return digest.digest(new byte[] {2});
+    }
+    if (kind != ObservationKind.DIRECTORY_LISTING) {
+      digest.update(
+          (stat.getNodeId()
+                  + ":"
+                  + stat.getLastModifiedTimeNanos()
+                  + ":"
+                  + stat.getLastChangeTimeNanos()
+                  + ":"
+                  + stat.getPermissions()
+                  + ":")
+              .getBytes(StandardCharsets.UTF_8));
+    }
     if (stat.isSymbolicLink()) {
       digest.update((byte) 1);
       digest.update(path.readSymbolicLink().getPathString().getBytes(StandardCharsets.UTF_8));
@@ -208,7 +228,7 @@ final class SharedGraphLifecycle {
         digest.update((byte) 0);
         digest.update(entry.getType().toString().getBytes(StandardCharsets.UTF_8));
         digest.update((byte) 0);
-        if (recursive) {
+        if (kind == ObservationKind.TREE_OUTPUT) {
           digest.update(fingerprint(path.getChild(entry.getName()), true));
         }
       }
@@ -241,19 +261,31 @@ final class SharedGraphLifecycle {
   ImmutableSet<SkyKey> changedKeys() throws IOException, InterruptedException {
     checkState(state == State.RECONCILING);
     var changed = ImmutableSet.<SkyKey>builder();
+    var details = ImmutableList.<Map<String, String>>builder();
+    int detailCount = 0;
     var cache = new HashMap<Location, byte[]>();
     for (var observation : observations) {
       checkInterrupted();
-      var location = new Location(observation.path(), observation.recursive());
+      var location = new Location(observation.path(), observation.kind());
       byte[] actual = cache.get(location);
       if (actual == null) {
-        actual = fingerprint(location.path(), location.recursive());
+        actual = fingerprint(location.path(), location.kind());
         cache.put(location, actual);
       }
       if (!Arrays.equals(actual, observation.fingerprint())) {
         changed.add(observation.key());
+        if (detailCount++ < 256) {
+          details.add(
+              Map.of(
+                  "key", observation.key().getCanonicalName(),
+                  "path", observation.path().getPathString(),
+                  "kind", observation.kind().name(),
+                  "before", java.util.HexFormat.of().formatHex(observation.fingerprint()),
+                  "after", java.util.HexFormat.of().formatHex(actual)));
+        }
       }
     }
+    changedObservations = details.build();
     return changed.build();
   }
 
@@ -297,6 +329,7 @@ final class SharedGraphLifecycle {
     status.put("mapped_bytes", mappedBytes);
     status.put("fingerprints", observations.size());
     status.put("changed_nodes", changedNodes);
+    status.put("changed_observations", changedObservations);
     status.put("reconciliation_ns", reconciliationNanos);
     status.put("fallback", fallback);
     status.put("failure", failure);

@@ -107,6 +107,33 @@ public final class SharedGraphLifecycleTest {
   }
 
   @Test
+  public void directoryStateAndListingHaveIndependentFingerprints() throws Exception {
+    var dir = write("/work/original", "x").getParentDirectory();
+    var stateKey = track(dir);
+    var listingKey = DirectoryListingStateValue.key(stateKey);
+    graph.createIfAbsentBatch(null, Reason.OTHER, ImmutableList.of(listingKey));
+    String generation = prepare();
+    write("/work/added", "new");
+    lifecycle.beginReconciliation(generation);
+    assertThat(lifecycle.changedKeys()).containsExactly(listingKey);
+    assertThat(lifecycle.status().get("changed_observations").toString())
+        .contains("DIRECTORY_LISTING");
+    assertThat(lifecycle.status().get("changed_observations").toString()).contains("/work");
+  }
+
+  @Test
+  public void directoryMetadataAloneDoesNotChangeStateOrListing() throws Exception {
+    var dir = write("/work/original", "x").getParentDirectory();
+    var stateKey = track(dir);
+    var listingKey = DirectoryListingStateValue.key(stateKey);
+    graph.createIfAbsentBatch(null, Reason.OTHER, ImmutableList.of(listingKey));
+    String generation = prepare();
+    dir.setLastModifiedTime(12345);
+    lifecycle.beginReconciliation(generation);
+    assertThat(lifecycle.changedKeys()).isEmpty();
+  }
+
+  @Test
   public void recursiveOutputFingerprintIncludesUnchangedMetadataChildren() throws Exception {
     var file = write("/outputs/tree/child", "alpha");
     var directory = file.getParentDirectory();

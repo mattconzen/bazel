@@ -277,12 +277,18 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
 
   @Override
   public synchronized DependencyState addReverseDepAndCheckIfDone(@Nullable SkyKey reverseDep) {
+    if (storage instanceof Frozen && reverseDep == null) {
+      return DependencyState.DONE;
+    }
     return mutable("addReverseDepAndCheckIfDone").addReverseDepAndCheckIfDone(reverseDep);
   }
 
   @Override
   public synchronized DependencyState checkIfDoneForDirtyReverseDep(SkyKey reverseDep)
       throws InterruptedException {
+    if (storage instanceof Frozen) {
+      return DependencyState.DONE;
+    }
     return mutable("checkIfDoneForDirtyReverseDep").checkIfDoneForDirtyReverseDep(reverseDep);
   }
 
@@ -303,6 +309,11 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
 
   @Override
   public synchronized Collection<SkyKey> getAllReverseDepsForNodeBeingDeleted() {
+    if (storage instanceof Frozen frozen) {
+      // Frozen reverse edges are already consolidated. The collection owns the mapped store and
+      // remains valid after this handle is removed from graph membership.
+      return frozen.record().reverseDeps();
+    }
     return mutable("getAllReverseDepsForNodeBeingDeleted").getAllReverseDepsForNodeBeingDeleted();
   }
 

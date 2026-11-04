@@ -275,7 +275,10 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
           }
           var changed = sharedGraphLifecycle.changedKeys();
           startIncrementalBuildMonitoring();
-          memoizingEvaluator.delete(changed::contains);
+          // Preserve completed values and unrelated dirty nodes so ordinary evaluation can prune
+          // equal values. Deletion discards the entire reverse closure, even on a no-change
+          // restore.
+          recordingDiffer.invalidate(changed);
           recordingDiffer.invalidateTransientErrors();
           memoizingEvaluator.evaluate(
               ImmutableList.of(),
