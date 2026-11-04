@@ -115,3 +115,8 @@ observation kind and old/new SHA-256 fingerprints. These are diagnostics rather 
 an exhaustive filesystem diff. Completed frozen nodes do not promote for null-parent
 DONE checks, dirty-parent DONE checks, or consolidated reverse-edge reads on deletion.
 These changes address measured reuse risks; they do not establish host memory savings.
+
+`shared_graph status` also returns node/baseline counts and aggregate promotion
+reasons, dependency IDs and copied mapped bytes. These counter reads do not scan
+node handles and remain available while the generation is prepared. Full graph
+dumps remain excluded by the prepared command barrier.

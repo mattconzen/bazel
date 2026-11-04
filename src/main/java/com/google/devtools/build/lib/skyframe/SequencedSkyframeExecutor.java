@@ -302,7 +302,18 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       default ->
           throw new IllegalArgumentException("Expected prepare, reconcile, status, or discard");
     }
-    return sharedGraphLifecycle.status();
+    var status = sharedGraphLifecycle.status();
+    if (memoizingEvaluator.getInMemoryGraph()
+        instanceof com.google.devtools.build.skyframe.LayeredInMemoryGraph layered) {
+      // Read aggregate counters only. A full graph inventory touches every handle and can itself
+      // break copy-on-write sharing, and ordinary dump commands are excluded while prepared.
+      status.put("nodes", layered.valuesSize());
+      status.put("baseline_nodes", layered.baselineNodeCount());
+      status.put("promotions_by_reason", layered.promotionsByReason());
+      status.put("promoted_dependency_ids", layered.copiedDependencyCount());
+      status.put("copied_mapped_bytes", layered.copiedMappedBytes());
+    }
+    return status;
   }
 
   @Override

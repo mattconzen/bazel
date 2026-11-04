@@ -72,6 +72,11 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
     executor.drainChangedFiles();
     executor.noteSharedGraphCommandResult("build", true);
     var prepared = executor.sharedGraphOperation("prepare", "", "", "", reporter);
+    var preparedStatus = executor.sharedGraphOperation("status", "", "", "", reporter);
+    assertThat(preparedStatus.get("state")).isEqualTo("PREPARED");
+    assertThat(preparedStatus.get("nodes")).isEqualTo(prepared.get("nodes"));
+    assertThat(preparedStatus.get("promoted_dependency_ids"))
+        .isEqualTo(prepared.get("promoted_dependency_ids"));
     scratch.overwriteFile("pkg/data.txt", "new");
     scratch.file("pkg/added.txt", "added");
     var resumed =
