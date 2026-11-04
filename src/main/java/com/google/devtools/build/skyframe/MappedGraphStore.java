@@ -380,10 +380,35 @@ final class MappedGraphStore extends FrozenGraphStore {
   }
 
   void verifyBackingFile() throws IOException {
-    var verified = openValidated(file, generation(), revision, size(), keys);
-    if (!MessageDigest.isEqual(checksum, verified.checksum)) {
-      throw new IOException("Arena changed since template preparation");
+    // This store and its Java tables were fully validated before template publication. Restore
+    // must prove that the file is exactly that validated arena, rather than allocate per-record
+    // duplicate-detection sets and another mapping for identical bytes. Keep both the manifest's
+    // digest and a fresh digest of the complete file tied to the checksum saved in the warmed JVM.
+    // The controller excludes writers throughout this operation, as during initial validation.
+    require(Files.size(file) == data.byteSize(), "Arena length changed since template preparation");
+    MessageDigest actual = digest();
+    long bytes = 0;
+    try (var in = new BufferedInputStream(Files.newInputStream(file))) {
+      byte[] header = in.readNBytes(HEADER_BYTES);
+      require(header.length == HEADER_BYTES, "Truncated manifest");
+      require(
+          MessageDigest.isEqual(
+              checksum, Arrays.copyOfRange(header, CHECKSUM_OFFSET, CHECKSUM_OFFSET + 32)),
+          "Arena manifest changed since template preparation");
+      Arrays.fill(header, CHECKSUM_OFFSET, CHECKSUM_OFFSET + 32, (byte) 0);
+      actual.update(header);
+      bytes = header.length;
+      byte[] chunk = new byte[64 * 1024];
+      int count;
+      while ((count = in.read(chunk)) != -1) {
+        actual.update(chunk, 0, count);
+        bytes += count;
+      }
     }
+    require(bytes == data.byteSize(), "Arena length changed during restore verification");
+    require(
+        MessageDigest.isEqual(checksum, actual.digest()),
+        "Arena changed since template preparation");
   }
 
   void prefault() {

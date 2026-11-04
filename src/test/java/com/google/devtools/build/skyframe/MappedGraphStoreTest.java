@@ -209,6 +209,32 @@ public final class MappedGraphStoreTest {
   }
 
   @Test
+  public void restoreVerificationRejectsManifestBodyAndLengthChanges() throws Exception {
+    complete();
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    graph.verifyBaseline();
+    Path file = graph.backingFile();
+    byte[] original = Files.readAllBytes(file);
+    Files.setPosixFilePermissions(
+        file,
+        java.util.Set.of(
+            java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+            java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
+    for (int offset : new int[] {0, MappedGraphStore.CHECKSUM_OFFSET, original.length - 1}) {
+      byte[] changed = original.clone();
+      changed[offset] ^= 1;
+      Files.write(file, changed);
+      assertThrows(IOException.class, graph::verifyBaseline);
+    }
+    Files.write(file, Arrays.copyOf(original, original.length - 1));
+    assertThrows(IOException.class, graph::verifyBaseline);
+    Files.write(file, Arrays.copyOf(original, original.length + 1));
+    assertThrows(IOException.class, graph::verifyBaseline);
+    Files.write(file, original);
+    graph.verifyBaseline();
+  }
+
+  @Test
   public void restoreVerificationRejectsChangedArenaEvenWithValidNewChecksum() throws Exception {
     complete();
     graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);

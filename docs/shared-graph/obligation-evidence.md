@@ -130,3 +130,45 @@ Mapped tests prove both collection and detection of an intentionally retained
 array. Heap, mapped, lifecycle and runtime suites passed in
 `/tmp/shared-graph-obligations-retention-tests.log`; real Envoy audit evidence
 remains required before closing SG-003.
+
+## Preparation and failure scenario audit
+
+| Scenario | Current implementation and evidence | Scope / remaining work |
+| --- | --- | --- |
+| Command/evaluation exclusion | Dispatcher command lock, immediately preceding successful analysis-only build, prepared admission barrier; lifecycle rejection tests | Offline controller also owns filesystem/repository activity through publication; arbitrary concurrent external writers are unsupported |
+| Dirty/error/in-flight nodes | Freeze stages successful completed entries; inherited layered/mapped evaluator suites preserve mutable dirty/error entries | A successful native integration suite alone is not layered coverage |
+| Before-publication interruption/failure | Freeze checks interruption before commit, stages replacements, rolls installed handles back on failure, deletes unpublished arena; failed-construction mapped test retains a usable mutable graph | No mid-commit interruption check; rollback remains necessary for runtime failures |
+| After-freeze failure | Lifecycle becomes PREPARED before GC/prefault; ordinary commands remain blocked | Error-injection coverage of every allocation/publication boundary remains incomplete |
+| Missing paths, directories/listings, symlinks, unchanged metadata | Lifecycle fingerprint tests, including separate state/listing cache keys and recursive generated output content | External repository paths use the same observation code; representative remote connection refresh is not independently demonstrated |
+| First restored query / failed reconciliation | Real guest query rejection; failed reconciliation test permits retry/control/shutdown and blocks ordinary query | A wrong/corrupt generation must never be relabeled a successful restore |
+| Generated outputs, rewinding, configuration, transient errors | Native FilesystemValueChecker/OutputsInvalidation/LateDiscoveredInputs/RewoundActionOutputChecker suites; native monitoring and differencer initialization retained | These seven integration suites are not all parameterized over heap/mapped; executor test covers both storage modes |
+| Equal-value pruning/version clock | Executor reconciliation retains evaluator identity and unrelated dirty state; inherited evaluator contracts | Module runtime regression preserves warmed precomputed inputs |
+| Corrupt/truncated/mismatched arena | MappedGraphStoreTest covers checksum, trailing/truncated data, offsets, group boundaries, key handles, duplicate reverse edges, generation/revision/key table mismatches | Validating the checksum saved in the warmed JVM also rejects a rewritten arena with a newly valid disk checksum |
+| Reader retirement/reset | Mapped retained-reader test keeps direct and reverse readers useful after generation cleanup | Controller VM leases additionally prevent deletion of snapshot assets while a VMM process is alive |
+| Runtime budget/fallback | Controller command-boundary policy calls full native evaluator discard, then verifies actions and archives | Real Envoy threshold exercise pending; private VMM bytes are broader than graph bytes |
+
+This audit records supported contracts and the remaining representative evidence.
+It does not check every SG-008 item merely because related native suites passed.
+
+## Second measured correction: restore verification
+
+The two-clone corrected-buffer probe measured about 41.96 MiB of fingerprint
+allocation per clone, versus 1,502.68 MiB in the earlier two-clone probe. Both
+restored clones read 5,232,833,830 bytes across 23,362 regular files with one
+65,536-byte scratch buffer. This diagnostic overlap does not support a wall-time
+or CPU acceptance claim. Arena validation remained 221.85 MiB per clone.
+
+`verifyBackingFile()` was reopening the arena through `openValidated()`, which
+also creates another mapping and per-record boxed duplicate-detection sets. The
+next isolated correction replaces only this repeated restore validation with a
+streaming digest. Initial publication still performs complete structural/key-table
+validation. Restore checks the length, on-disk digest and freshly computed full
+content digest against the checksum saved in the warmed JVM. Changed bytes with
+a newly valid disk checksum must still fail. Controller filesystem exclusion and
+the snapshot-coupled, already-validated Java tables remain requirements.
+
+Expected removable cost: most of the measured 221.85 MiB of validation allocation;
+the new path uses one 64 KiB chunk and a small fixed header. Validate original
+corruption/format/table tests, add changed manifest/body/truncated/trailing restore
+cases, rebuild/pin the binary, then repeat the diagnostic before performance runs.
+No retained-byte or host-memory benefit is assumed from allocation alone.

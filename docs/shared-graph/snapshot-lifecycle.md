@@ -62,9 +62,10 @@ bazel --noidle_server_tasks --experimental_shared_graph_mode=mapped \
 A wrong generation fails without releasing admission. Reconciliation resets only
 filesystem watching, syscall caches and the digest cache; it does not call
 `resetEvaluator`. It rehashes tracked contents/listings/symlinks/outputs, schedules
-changed keys for deletion with their reverse closure, and uses the existing
-empty-root evaluator path to complete deletion/invalidation. This conservatively
-prevents equal metadata from pruning a content change away. Existing evaluator
+changed keys for native invalidation, and uses the existing
+empty-root evaluator path to complete invalidation. The current implementation
+submits changed observation keys to the recording differencer, preserving old
+values for native change pruning and unrelated dirty entries. Existing evaluator
 versions continue. Subsequent commands perform their normal environment,
 configuration, repository, output checking and error initialization.
 
@@ -95,8 +96,21 @@ Fingerprint tables are Java heap overhead; full content verification and templat
 GC add preparation/resume cost. Prefaulting does not guarantee sharing after
 guest reclamation/refault. The integration smoke and existing semantic tests do
 not establish fleet memory savings, production workload coverage, a private-memory
-budget, automatic replay after runtime invariant failures, or canary readiness.
-Those remain measurement and operational gates in the implementation plan.
+budget inside Bazel, automatic replay after runtime invariant failures, or canary
+readiness. The controller now offers an explicit soft per-VMM private resident
+budget checked at completed-command boundaries. On threshold crossing it calls
+full native evaluator discard and verifies fresh-native action/archive equivalence
+before continuing. This includes all VMM private pages, not precise graph bytes,
+and does not promise that discarded heap or host CoW pages are reclaimed. A
+dedicated unit's kernel limit bounds commands separately. Both controls default
+to disabled unless explicitly selected.
+
+The controller's generation registry leases immutable disk/RAM/state identities
+to actual VMM processes. A new current generation routes new leases while old
+clones retain their generation. Retirement is rejected until every reader process
+has exited; a changed asset or failed cohort quarantines the generation. Real
+process tests cover publication, renewal, quarantine and retirement. This is local
+controller routing, not a persistent multi-controller service or canary approval.
 
 Restore also revalidates the mapped arena against the checksum retained by the warmed JVM before reading dependency vectors. Rewriting both arena contents and its on-disk checksum does not bypass this comparison. Reconciliation initializes the ordinary incremental file monitor before flushing pending invalidations, retaining the existing evaluator and version clock.
 
