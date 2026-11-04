@@ -91,15 +91,15 @@ totals cannot close a retained-byte gate.
 
 | Ticket | Evidence being collected | Acceptance status |
 | --- | --- | --- |
-| SG-001 | Four-clone/600-second contract, source/image/runtime pins, fresh references | Current-protocol warmed controls still required |
-| SG-002 | Exact joint retained sets and value-family retention with Eclipse MAT | Matched four-arm stages pending |
-| SG-003 | Real retainer audit plus promotion/materialization counters | Absence of all claimed obsolete arrays not yet established |
+| SG-001 | Four-clone/600-second contract, source/image/runtime pins, fresh references | Four-arm warmed diagnostic controls complete; production lifetime pending |
+| SG-002 | Exact joint retained sets and value-family retention with Eclipse MAT | Sixteen matched stages complete, with calibrated sizes/unknowns and class-only retainer paths |
+| SG-003 | Real retainer audit plus promotion/materialization counters | Real Envoy audit reports zero survivors in all tracked replaced-storage families; useful-work residual arrays match native promotions |
 | SG-004 | Common snapshot identity/offsets and resident file PTEs, VMM PSS and unit charges | Arena-specific durability and complete-host accounting unresolved |
 | SG-005 | Per-phase command-thread allocation, heap use, GC and wall diagnostics | Filesystem verification 1,502.68 MiB and arena validation 221.85 MiB allocated in the pre-fix probe; corrected comparison pending |
-| SG-006 | Only evidence-backed fixes | Bounded fingerprint buffer reuse selected; measured after-result pending |
+| SG-006 | Only evidence-backed fixes | Fingerprint allocation fell from 1,502.68 to about 41.96 MiB per clone; streaming restore validation is the next isolated correction |
 | SG-009/SG-010 | Comparable native/off/heap/mapped production lifetime and explicit gate table | Prior corrected mapped memory results failed in VMM scope; current acceptance pending |
 | SG-011–SG-013 | Payload decision and adapter only if justified | Deferred behind earlier decision |
-| SG-014/SG-015 | Budget, fallback, retirement and operational failures | Explicit discard exists; remaining controls unfinished |
+| SG-014/SG-015 | Budget, fallback, retirement and operational failures | Integrated command-boundary budget and generation leases; real native fallback probe passes; broader failure/pressure cases remain |
 | SG-016 | Long-lived operational validation and canary | Blocked on acceptance and controls |
 
 Offline retained sets for different categories/value families overlap. Report
@@ -129,7 +129,9 @@ references. Default preparation does not allocate these per-node audit objects.
 Mapped tests prove both collection and detection of an intentionally retained
 array. Heap, mapped, lifecycle and runtime suites passed in
 `/tmp/shared-graph-obligations-retention-tests.log`; real Envoy audit evidence
-remains required before closing SG-003.
+is now available: all tracked old delegates, direct arrays, reverse containers and
+old readers had zero survivors after template GC. This proves the audited storage
+families are released, not complete host-memory savings.
 
 ## Preparation and failure scenario audit
 
@@ -172,3 +174,54 @@ the new path uses one 64 KiB chunk and a small fixed header. Validate original
 corruption/format/table tests, add changed manifest/body/truncated/trailing restore
 cases, rebuild/pin the binary, then repeat the diagnostic before performance runs.
 No retained-byte or host-memory benefit is assumed from allocation alone.
+
+
+## Published attribution and first controlled probes
+
+[The immutable evidence bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/42e11e66c4c325f7b7c592bafb8cc433abffac28/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations)
+contains sixteen matched diagnostic stages, calibrated category/family retained
+sets with unknowns, JVM histogram/heap/NMT correlation, all source test logs,
+failed attempts and completed buffer/retention and budget/fallback probes.
+
+The matched baseline shows native live histogram bytes of 259.56 MiB and mapped
+254.26 MiB after first work. Nearby diagnostic JVM PSS is 972.41 versus 1058.84
+MiB; full GC/heap dumps perturb those figures, so they are not performance
+comparisons. Native direct arrays retain 9.85 MiB and reverse lists 9.24 MiB
+individually. Their union lies between the maximum and sum, before replacement
+costs. These are modeled object bytes, not host-page savings. Mapped frozen
+representation roots occupy 25.43 MiB including mapped dependency readers;
+the heap category's 12.72 MiB excludes its separately categorized dependency
+readers and therefore is not a directly comparable total.
+
+After useful work the mapped arm has four small native direct arrays and three
+reverse lists, six native promotions, 11,932 copied dependency IDs and 570
+legacy materialized IDs versus approximately two million graph dependencies.
+Class-only inbound paths lead to native entries. The real template weak-reference
+audit separately reports zero survivors for 208,327 delegates, 144,813 direct
+arrays, 12,008 reverse containers and 208,327 old readers. This distinguishes
+legitimate promoted storage from the original offloaded arrays.
+
+The two-clone probe passes 13 action/output/identity/integrity checks and confirms
+398,352,384 shared resident snapshot-file bytes after restore using common
+immutable backing identity/offsets and file PTEs. This is not arena-specific
+attribution. The one-clone low-budget probe passes 12 checks: full native discard
+at a safe boundary retains the JVM and verifies fresh-native actions/archives.
+Both generation registries end retired with zero live leases.
+
+The controller's extended workload adds a widely loaded Envoy Starlark edit,
+two clones changing the same Starlark key differently, and an actual compiler
+error followed by archive-verified recovery. Compiler error contracts strip ANSI
+formatting and the optional GCC `#error` prefix, deduplicate PIC/non-PIC copies,
+and reject extra error messages. The pinned Clang's actual output was reproduced
+locally; all raw guest diagnostics/commands remain preserved. A superseded
+reference protocol is retained separately rather than mixed into acceptance.
+
+
+[The matched two-clone streaming-validation probe](https://github.com/mattconzen/bazel-shared-graph-bench/blob/f15ca6725771b4bf9e1284747fadf170d8f0441f/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations/stream-validation-probe/trial.json)
+subsequently passed all 13 checks
+with the same actor hash as its fresh native reference. Arena validation allocated
+86,720 bytes per clone (about 84.7 KiB), compared with 221.85 MiB on the preceding
+binary. It retained unchanged arena digests, ordinary action/archive equivalence
+and safe generation retirement. The differently pinned earlier protocol-transition
+probe is excluded from acceptance. Production CPU, latency and total-host memory
+remain separate pending gates.

@@ -20,6 +20,16 @@ correctness checks against fresh native outputs/action identities. Time actual
 builds separately from verification and disclose between-round verification's
 resident-memory effects. A ten-minute run is not ten minutes of idle residency.
 
+The extended protocol changes `bazel/envoy_library.bzl` to exercise broad Starlark
+invalidation and places two clones on different `poc_version.bzl` definitions
+concurrently before reverting both. A deliberate compiler `#error` in the selected
+library must match a fresh native error contract and then recover to identical
+archives. These add two fresh native input states to the five existing controls.
+The representative held load is 512 MiB per guest; record actual reclaim and
+allocator survival, not the requested allocation alone. The historical failed
+768 MiB stress profiles remain separate evidence. Explicit guest-cache eviction
+is a separate refault probe and never substitutes for natural pressure.
+
 Compare unmodified warmed native, patched-off, heap baseline and mapped
 dependencies. Cold JVMs are context only. Use three independent seeds per arm
 for the production comparison, counterbalancing arm order across seeds. Report
@@ -27,6 +37,13 @@ per-seed data and descriptive ranges; bootstrap confidence intervals over seeds
 are exploratory with only three seeds. Never treat within-seed samples as
 independent seeds. Report p95 within each seed without calling it a robust fleet
 tail estimate. Add seeds if uncertainty prevents a decision.
+
+The primary CPU/build and client p95 population uses the fixed named analysis
+rounds. Faster arms may execute more filler no-ops to reach 600 seconds; exclude
+those different filler populations from paired CPU/p95 comparisons. Report both
+the actual full lifetime and the covered first-600-second memory integral, including
+the first-sample delay. Verification and selected-library execution remain outside
+timed analysis windows and can affect residency between rounds.
 
 For 1/2/8-clone scaling, first perform one independent seed per arm as descriptive
 screening. Repeat where a scaling conclusion is needed. Keep the earlier

@@ -40,7 +40,12 @@ The measured first correction reuses fingerprint buffers; its source tests pass,
 and its allocation/host-memory effect still requires the pinned comparison.
 An opt-in real-graph weak-reference audit is implemented and tested, including
 a deliberately retained array that must be reported as surviving. Matched
-four-arm diagnostic collection is in progress. No acceptance gate is inferred
+four-arm diagnostic collection and the two-clone retention/buffer and native
+fallback probes are complete. [Published attribution evidence](https://github.com/mattconzen/bazel-shared-graph-bench/tree/42e11e66c4c325f7b7c592bafb8cc433abffac28/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations)
+separates retained objects, allocation and physical memory. The second measured
+correction streams the saved validated-arena digest during restore. Its corruption
+and restore regression suites pass; its after-probe and the production lifetime
+comparison remain pending. No acceptance gate is inferred
 from these implementation checkmarks.
 
 ## Execution rules and order
@@ -72,7 +77,7 @@ from these implementation checkmarks.
 
 - [x] Inventory existing code, tests, raw trials and reports against each plan
   requirement; distinguish implemented, demonstrated, failed and unmeasured.
-- [ ] Pin source, binaries, image, controller, Envoy revision, toolchains, JVM/GC,
+- [x] Pin source, binaries, image, controller, Envoy revision, toolchains, JVM/GC,
   VM resources, guest paths, snapshot backing, cache warmth and KSM policy.
 - [x] Define the representative related-branch workload, expected production
   clone count and VM lifetime. State exactly which analysis, compilation and
@@ -92,17 +97,17 @@ original obligations each existing artifact actually satisfies.
 **Plan:** §§6, 8/PR0, 10, 12. **Owner:** runtime, with graph review.
 **Depends on:** SG-001.
 
-- [ ] Collect diagnostic retained-heap evidence for native, patched-off, heap
+- [x] Collect diagnostic retained-heap evidence for native, patched-off, heap
   and mapped arms at comparable warmed, post-conversion, post-restore and
   post-incremental-work phases, with controlled diagnostic GC.
-- [ ] Attribute bytes to direct/reverse dependencies, values, canonical keys,
+- [x] Attribute bytes to direct/reverse dependencies, values, canonical keys,
   handles, frozen records/readers, indexes, promoted nodes, caches and
   caller-retained materializations. Treat shallow histograms as supporting data.
 - [ ] Rank value families by retained bytes, sharing/fanout and materialization
   demand; avoid double-counting overlapping dominator/retainer ownership.
-- [ ] Correlate retained/live heap with committed and resident heap, native JVM
+- [x] Correlate retained/live heap with committed and resident heap, native JVM
   allocations and arena residency. Keep object bytes and physical pages distinct.
-- [ ] Quantify the dependency-only opportunity and the remaining Java overhead.
+- [x] Quantify the dependency-only opportunity and the remaining Java overhead.
   Record uncertainty and plausible savings bounds rather than equating encoded
   arena size with removable heap or physical duplication.
 
@@ -115,13 +120,13 @@ material opportunity. This closes the missing PR0 attribution requirement.
 **Plan:** §§5–7, 8/PR3. **Owner:** graph, with runtime review.
 **Depends on:** SG-002.
 
-- [ ] Audit real Envoy retainer paths for old delegates and dependency arrays,
+- [x] Audit real Envoy retainer paths for old delegates and dependency arrays,
   construction maps/buffers, key/value tables, interners, serialization memo
   tables, command results, futures, thread locals and queues.
-- [ ] Verify successful conversion releases obsolete storage after controlled
+- [x] Verify successful conversion releases obsolete storage after controlled
   template GC. Distinguish legitimate arrays for unfrozen/promoted nodes from
   arrays whose storage is claimed as offloaded.
-- [ ] Exercise hot dependency consumers and instrumentation; measure remaining
+- [x] Exercise hot dependency consumers and instrumentation; measure remaining
   legacy-array materialization and show ordinary traversal does not silently
   reconstruct or cache the complete graph.
 - [ ] Correlate promotion/materialization counters with retained bytes and
@@ -138,10 +143,10 @@ are attributed. Synthetic weak-reference tests alone do not close this ticket.
 **Plan:** §§7, 8/PR0–PR4, 10. **Owner:** runtime.
 **Depends on:** SG-001; use SG-002 attribution as it becomes available.
 
-- [ ] Verify clones use the same immutable RAM backing object and offsets;
+- [x] Verify clones use the same immutable RAM backing object and offsets;
   record file identity, mapping mode, generation and prefault coverage. Audit any
   custom fault loader rather than assuming it shares the same backing.
-- [ ] Establish a supported host measurement method for shared versus private
+- [x] Establish a supported host measurement method for shared versus private
   resident pages across clones. Masked PFNs and guest arena RSS are insufficient
   evidence; document any remaining attribution limit.
 - [ ] Account for all participating VMMs, controllers and helper processes,
@@ -166,11 +171,11 @@ evaluated. A measurement limitation does not count as a passed gate.
   watcher/cache reset, differencer work and ordinary initialization phases.
 - [ ] Measure allocation, GC, residency and private-page growth per phase;
   explain the large anonymous charges observed before the first ordinary build.
-- [ ] Attribute retained observation tables and per-file hashing allocations,
+- [x] Attribute retained observation tables and per-file hashing allocations,
   including the current fresh 64 KiB buffer for regular-file fingerprints.
 - [ ] Measure the cost of frozen wrappers/records/readers and synchronized
   getters. Distinguish measured effects from hypotheses about monitor writes.
-- [ ] Compare all four initial arms under equivalent work and identify which
+- [x] Compare all four initial arms under equivalent work and identify which
   costs are necessary, avoidable or still unexplained.
 
 **Done when:** a phase-by-phase report explains the material excess or identifies
@@ -184,11 +189,11 @@ alone is not evidence that restoration preserves physical sharing.
 
 - [x] Select one measured cost at a time and record its expected removable
   bytes, semantic constraints and validation experiment before changing code.
-- [ ] Remove proven obsolete retention or unnecessary materialization; reduce
+- [x] Remove proven obsolete retention or unnecessary materialization; reduce
   fingerprint allocation or wrapper/read overhead only where evidence warrants.
-- [ ] Preserve misleading-metadata detection, canonical identity, exact
+- [x] Preserve misleading-metadata detection, canonical identity, exact
   concurrency contracts, native invalidation and generation/integrity checks.
-- [ ] Run the relevant existing regression suites and add cases for changed
+- [x] Run the relevant existing regression suites and add cases for changed
   contracts or discovered failures; build `//src:bazel-dev` and pin its digest.
 - [ ] Repeat the affected diagnostic and controlled comparison. Retain failed
   attempts and reject changes whose extra costs erase their benefit.
@@ -233,7 +238,7 @@ loses semantics. Open compatibility obligations remain visible.
 **Plan:** §§7, 8/PR4, 9, 11. **Owner:** both.
 **Depends on:** SG-001 and applicable SG-007 contracts.
 
-- [ ] Audit exclusion of commands, evaluation, repository activity, graph cleanup
+- [x] Audit exclusion of commands, evaluation, repository activity, graph cleanup
   and pending invalidation through preparation/publication. Verify dirty entries
   remain mutable and unsuccessful/in-flight/discarded-analysis states are rejected.
 - [ ] Exercise cancellation/partial failure during conversion and publication:
@@ -367,9 +372,9 @@ implement the adapter without a general artifact-identity redesign.
 - [ ] Define and expose mode, generation, promotion reason, mapped/heap/private
   bytes, cache bytes, reconciliation duration and fallback reason. Label estimates
   and unmeasured quantities; avoid per-record writes in immutable pages.
-- [ ] Add a coarse private-memory budget and schedule full fallback at a safe
+- [x] Add a coarse private-memory budget and schedule full fallback at a safe
   command boundary when exceeded. Include measured cache/materialization costs.
-- [ ] Preserve dirty/deleted validity state until the evaluator is safely detached;
+- [x] Preserve dirty/deleted validity state until the evaluator is safely detached;
   never erase markers or silently reuse baseline data to satisfy a budget.
 - [ ] Test the threshold during edits, errors and pressure; verify observability
   and correctness with ordinary templates available for fallback.
@@ -387,9 +392,9 @@ budget enforcement cannot resurrect stale values or interrupt graph invariants.
   return an explicit failure. Automatic replay is not a prerequisite for safety.
 - [ ] Verify compatibility/integrity rejection and failed reconciliation never
   admit ordinary builds or queries before successful retry/full fallback.
-- [ ] Coordinate graph, reader, VM and controller lifetime so reset/clean/shutdown
+- [x] Coordinate graph, reader, VM and controller lifetime so reset/clean/shutdown
   and generation retirement cannot unmap, rewrite or truncate live backing files.
-- [ ] Renew baselines by publishing a new template and routing new clones to it;
+- [x] Renew baselines by publishing a new template and routing new clones to it;
   keep existing clones' generations alive. Restart with native Bazel or a fresh
   whole-VM restore rather than importing the hybrid arena into an unrelated JVM.
 - [ ] Exercise rollback and injected failures before/after publication, during
