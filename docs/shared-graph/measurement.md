@@ -90,3 +90,43 @@ The sampler has parsing, unit conversion, incomplete-process and PID-reuse tests
 A live-process smoke check verifies nonzero PSS and propagation of a failing
 workload's exit status. Graph inventory tests cover native, heap and mapped
 storage without triggering materialization or promotion.
+
+## Corrected Envoy restore experiment
+
+The `8ff24041b3b56434884157474972ce4d30510bed` binary preserves module
+precomputed inputs across lifecycle commands, uses native invalidation instead
+of deleting the reverse closure, and avoids several unnecessary promotions.
+With execution warmed before the final analysis-only freeze, unchanged restore
+now reports zero filesystem changes and zero promotions. Through the first
+version-library build, copied encoded dependency bytes fell from 20,611,560 to
+47,888 in the separate diagnostic; Java direct-dependency arrays after work fell
+from 138,517 to four. These are logical counts, not host memory savings.
+
+Eight sequential cohorts compared patched-off and mapped storage at two and
+four clones, with two independent seeds per cell. All 1,440 action/output and
+identity checks passed. All steady windows were free of host memory-limit
+and swap events. Median cohort VMM PSS across seeds was 3,451.8 versus 3,855.9
+MiB at two clones, and 5,816.9 versus 7,490.2 MiB at four clones: mapped used
+11.7% and 28.8% more in this scope. No-op analysis builds were timed separately
+from action-query verification; verification still ran between rounds, so the
+resident-memory comparison describes that verification-heavy workload.
+
+A substantial cost is already visible before ordinary work: after restoration
+and reconciliation, median dedicated-unit anonymous charges were 33.5 MiB for
+the four-clone off control and 5,873.0 MiB for mapped. This locates a major cost
+in the restore/reconcile interval despite zero dependency promotions. It does
+not attribute those bytes to a particular allocation or page-write site, and
+these overlapping memory measures must not be added to PSS.
+
+The workload covers full `envoy-static` analysis/action identities and actual
+version-library builds. The 128/256 MiB allocations were sustained, but none of
+the 16 profiles witnessed reclamation in every guest. Two fresh two-clone
+cohorts then sustained 512 MiB per guest with reclamation in both guests. Neither
+arm sustained the full 768 MiB profile: guest OOM killed one off-control pressure
+helper and both mapped helpers. All 230 recovery/correctness checks still passed
+with inherited Bazel servers; post-kill memory is not a held-load saving.
+
+This does not establish the plan's complete-host, physical-sharing,
+retained-byte or CPU/p95 rollout gates. Keep the backend off by default. Detailed
+provenance and pressure/recovery evidence are in the
+[controller results](https://github.com/mattconzen/bazel-shared-graph-bench/blob/69788d7d394521195b47e0811832b84bee27dc81/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-envoy-reuse/README.md).
