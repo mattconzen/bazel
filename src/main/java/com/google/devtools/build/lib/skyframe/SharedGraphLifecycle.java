@@ -25,6 +25,7 @@ import com.google.devtools.build.skyframe.InMemoryGraph;
 import com.google.devtools.build.skyframe.LayeredInMemoryGraph;
 import com.google.devtools.build.skyframe.SkyKey;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -66,6 +67,63 @@ final class SharedGraphLifecycle {
   private int changedNodes;
   private ImmutableList<Map<String, String>> changedObservations = ImmutableList.of();
   private ImmutableList<Observation> observations = ImmutableList.of();
+  private final Map<String, Map<String, Long>> phaseMetrics = new LinkedHashMap<>();
+
+  /** Aggregate command-thread diagnostics; never traverses or writes frozen node records. */
+  final class Phase implements AutoCloseable {
+    private final String name;
+    private final long started = System.nanoTime();
+    private final long allocated = allocatedBytes();
+    private final long heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed();
+    private final long collections = gcCount();
+    private final long collectionMillis = gcMillis();
+
+    Phase(String name) {
+      this.name = name;
+    }
+
+    @Override
+    public void close() {
+      long afterAllocated = allocatedBytes();
+      phaseMetrics.put(
+          name,
+          Map.of(
+              "wall_ns", System.nanoTime() - started,
+              "command_thread_allocated_bytes",
+                  allocated < 0 || afterAllocated < 0 ? -1L : afterAllocated - allocated,
+              "heap_used_before_bytes", heap,
+              "heap_used_after_bytes",
+                  ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed(),
+              "gc_collections", gcCount() - collections,
+              "gc_millis", gcMillis() - collectionMillis));
+    }
+  }
+
+  Phase phase(String name) {
+    return new Phase(name);
+  }
+
+  private static long allocatedBytes() {
+    var bean = ManagementFactory.getThreadMXBean();
+    if (bean instanceof com.sun.management.ThreadMXBean allocation
+        && allocation.isThreadAllocatedMemorySupported()
+        && allocation.isThreadAllocatedMemoryEnabled()) {
+      return allocation.getCurrentThreadAllocatedBytes();
+    }
+    return -1;
+  }
+
+  private static long gcCount() {
+    return ManagementFactory.getGarbageCollectorMXBeans().stream()
+        .mapToLong(bean -> Math.max(0, bean.getCollectionCount()))
+        .sum();
+  }
+
+  private static long gcMillis() {
+    return ManagementFactory.getGarbageCollectorMXBeans().stream()
+        .mapToLong(bean -> Math.max(0, bean.getCollectionTime()))
+        .sum();
+  }
 
   SharedGraphLifecycle(String mode) {
     checkState(
@@ -102,8 +160,15 @@ final class SharedGraphLifecycle {
         "Preparation requires the immediately preceding successful build --nobuild");
     // The controller must hold filesystem/workload exclusion continuously from that build through
     // snapshot publication. Re-read fingerprints to reject a filesystem changing during capture.
-    var staged = capture(graph);
-    var second = capture(graph);
+    phaseMetrics.clear();
+    ImmutableList<Observation> staged;
+    ImmutableList<Observation> second;
+    try (var phase = phase("prepare_capture_first")) {
+      staged = capture(graph);
+    }
+    try (var phase = phase("prepare_capture_verify")) {
+      second = capture(graph);
+    }
     checkState(staged.size() == second.size(), "Graph changed during preparation");
     for (int i = 0; i < staged.size(); i++) {
       checkState(
@@ -118,9 +183,13 @@ final class SharedGraphLifecycle {
       checkState(
           !directory.isEmpty() && java.nio.file.Path.of(directory).isAbsolute(),
           "Mapped preparation requires an absolute arena directory");
-      id = layered.freezeMappedAtQuiescentBoundary(java.nio.file.Path.of(directory), revision);
+      try (var phase = phase("prepare_freeze")) {
+        id = layered.freezeMappedAtQuiescentBoundary(java.nio.file.Path.of(directory), revision);
+      }
     } else {
-      id = layered.freezeAtQuiescentBoundary();
+      try (var phase = phase("prepare_freeze")) {
+        id = layered.freezeAtQuiescentBoundary();
+      }
     }
     observations = staged;
     generation = id;
@@ -129,8 +198,12 @@ final class SharedGraphLifecycle {
     // Close command admission before cleanup/prefaulting. Any failure after freeze remains blocked.
     state = State.PREPARED;
     eligible = false;
-    System.gc();
-    layered.prefaultBaseline();
+    try (var phase = phase("prepare_gc")) {
+      System.gc();
+    }
+    try (var phase = phase("prepare_prefault")) {
+      layered.prefaultBaseline();
+    }
   }
 
   private static ImmutableList<Observation> capture(InMemoryGraph graph)
@@ -333,6 +406,11 @@ final class SharedGraphLifecycle {
     status.put("reconciliation_ns", reconciliationNanos);
     status.put("fallback", fallback);
     status.put("failure", failure);
+    status.put("phase_metrics", new LinkedHashMap<>(phaseMetrics));
+    status.put(
+        "phase_metrics_scope",
+        "Wall time and command-thread allocation (-1 if unavailable); heap used and GC are JVM-wide."
+            + " These are diagnostics, not retained bytes or private physical pages.");
     return status;
   }
 

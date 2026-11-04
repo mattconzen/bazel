@@ -84,6 +84,9 @@ public final class SharedGraphLifecycleTest {
     lifecycle.finishReconciliation(1);
     assertThat(lifecycle.commandRejection("query")).isNull();
     assertThat(lifecycle.status().get("changed_nodes")).isEqualTo(1);
+    assertThat(lifecycle.status().get("phase_metrics").toString()).contains("prepare_capture_first");
+    assertThat(lifecycle.status().get("phase_metrics_scope").toString())
+        .contains("not retained bytes or private physical pages");
   }
 
   @Test

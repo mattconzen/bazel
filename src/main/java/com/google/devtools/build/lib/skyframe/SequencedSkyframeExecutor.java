@@ -268,25 +268,36 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       case "reconcile" -> {
         sharedGraphLifecycle.beginReconciliation(generation);
         try {
-          resetFilesystemWatching();
+          try (var phase = sharedGraphLifecycle.phase("reconcile_watcher_reset")) {
+            resetFilesystemWatching();
+          }
           if (memoizingEvaluator.getInMemoryGraph()
               instanceof com.google.devtools.build.skyframe.LayeredInMemoryGraph layered) {
-            layered.verifyBaseline();
+            try (var phase = sharedGraphLifecycle.phase("reconcile_arena_validation")) {
+              layered.verifyBaseline();
+            }
           }
-          var changed = sharedGraphLifecycle.changedKeys();
-          startIncrementalBuildMonitoring();
+          com.google.common.collect.ImmutableSet<SkyKey> changed;
+          try (var phase = sharedGraphLifecycle.phase("reconcile_fingerprints")) {
+            changed = sharedGraphLifecycle.changedKeys();
+          }
+          try (var phase = sharedGraphLifecycle.phase("reconcile_monitoring")) {
+            startIncrementalBuildMonitoring();
+          }
           // Preserve completed values and unrelated dirty nodes so ordinary evaluation can prune
           // equal values. Deletion discards the entire reverse closure, even on a no-change
           // restore.
-          recordingDiffer.invalidate(changed);
-          recordingDiffer.invalidateTransientErrors();
-          memoizingEvaluator.evaluate(
-              ImmutableList.of(),
-              com.google.devtools.build.skyframe.EvaluationContext.newBuilder()
-                  .setKeepGoing(true)
-                  .setParallelism(1)
-                  .setEventHandler(eventHandler)
-                  .build());
+          try (var phase = sharedGraphLifecycle.phase("reconcile_differencer")) {
+            recordingDiffer.invalidate(changed);
+            recordingDiffer.invalidateTransientErrors();
+            memoizingEvaluator.evaluate(
+                ImmutableList.of(),
+                com.google.devtools.build.skyframe.EvaluationContext.newBuilder()
+                    .setKeepGoing(true)
+                    .setParallelism(1)
+                    .setEventHandler(eventHandler)
+                    .build());
+          }
           sharedGraphLifecycle.finishReconciliation(changed.size());
         } catch (java.io.IOException | InterruptedException | RuntimeException | Error failure) {
           sharedGraphLifecycle.failReconciliation(failure.toString());
