@@ -15,6 +15,7 @@ package com.google.devtools.build.lib.skyframe;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.build.lib.vfs.FileStateKey;
@@ -58,6 +59,7 @@ final class SharedGraphLifecycle {
   private final String mode;
   private State state = State.READY;
   private boolean eligible;
+  private boolean preparationComplete;
   private boolean fallback;
   private UUID generation;
   private String file;
@@ -111,14 +113,18 @@ final class SharedGraphLifecycle {
       phaseMetrics.put(
           name,
           Map.of(
-              "wall_ns", System.nanoTime() - started,
+              "wall_ns",
+              System.nanoTime() - started,
               "command_thread_allocated_bytes",
-                  allocated < 0 || afterAllocated < 0 ? -1L : afterAllocated - allocated,
-              "heap_used_before_bytes", heap,
+              allocated < 0 || afterAllocated < 0 ? -1L : afterAllocated - allocated,
+              "heap_used_before_bytes",
+              heap,
               "heap_used_after_bytes",
-                  ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed(),
-              "gc_collections", gcCount() - collections,
-              "gc_millis", gcMillis() - collectionMillis));
+              ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed(),
+              "gc_collections",
+              gcCount() - collections,
+              "gc_millis",
+              gcMillis() - collectionMillis));
     }
   }
 
@@ -160,6 +166,10 @@ final class SharedGraphLifecycle {
 
   String commandRejection(String command) {
     if (state != State.READY && !command.equals("shared_graph") && !command.equals("shutdown")) {
+      if (state == State.PREPARED && !preparationComplete) {
+        return "Shared graph is PREPARED; preparation did not finish, discard this generation"
+            + " first";
+      }
       return "Shared graph is " + state + "; reconcile the matching generation or discard it first";
     }
     if (!command.equals("shared_graph")) {
@@ -181,15 +191,30 @@ final class SharedGraphLifecycle {
 
   void prepare(InMemoryGraph graph, String directory, String revision, boolean verifyRetention)
       throws IOException, InterruptedException {
+    prepare(graph, directory, revision, verifyRetention, () -> {});
+  }
+
+  @VisibleForTesting
+  void prepare(
+      InMemoryGraph graph,
+      String directory,
+      String revision,
+      boolean verifyRetention,
+      Runnable afterFreeze)
+      throws IOException, InterruptedException {
     checkState(
         enabled() && graph instanceof LayeredInMemoryGraph, "Shared graph backend is disabled");
     checkState(
         state == State.READY && generation == null && eligible,
         "Preparation requires the immediately preceding successful build --nobuild");
+    // Consume the successful-build admission token. A failed attempt may have observed a changing
+    // filesystem, so require ordinary analysis again before a new preparation attempt.
+    eligible = false;
     // The controller must hold filesystem/workload exclusion continuously from that build through
     // snapshot publication. Re-read fingerprints to reject a filesystem changing during capture.
     phaseMetrics.clear();
     fingerprintIo.clear();
+    preparationComplete = false;
     ImmutableList<Observation> staged;
     ImmutableList<Observation> second;
     try (var phase = phase("prepare_capture_first")) {
@@ -207,38 +232,60 @@ final class SharedGraphLifecycle {
           "Filesystem changed during preparation");
     }
     var layered = (LayeredInMemoryGraph) graph;
-    UUID id;
-    if (mode.equals("mapped")) {
-      checkState(
-          !directory.isEmpty() && java.nio.file.Path.of(directory).isAbsolute(),
-          "Mapped preparation requires an absolute arena directory");
-      try (var phase = phase("prepare_freeze")) {
-        id =
-            layered.freezeMappedAtQuiescentBoundary(
-                java.nio.file.Path.of(directory), revision, verifyRetention);
-      }
-    } else {
-      try (var phase = phase("prepare_freeze")) {
-        id = layered.freezeAtQuiescentBoundary(verifyRetention);
-      }
-    }
-    observations = staged;
-    generation = id;
-    mappedBytes = layered.mappedBytes();
-    file = layered.backingFile() == null ? null : layered.backingFile().toString();
-    // Close command admission before cleanup/prefaulting. Any failure after freeze remains blocked.
+    // Reserve admission before publication, including failures in phase-metric cleanup. A failed
+    // construction can reopen admission only after confirming that no baseline was committed.
     state = State.PREPARED;
-    eligible = false;
-    try (var phase = phase("prepare_gc")) {
-      System.gc();
-    }
-    if (verifyRetention) {
-      try (var phase = phase("prepare_retention_audit")) {
-        retentionAudit = layered.finishRetentionAudit();
+    try {
+      UUID id;
+      if (mode.equals("mapped")) {
+        checkState(
+            !directory.isEmpty() && java.nio.file.Path.of(directory).isAbsolute(),
+            "Mapped preparation requires an absolute arena directory");
+        try (var phase = phase("prepare_freeze")) {
+          id =
+              layered.freezeMappedAtQuiescentBoundary(
+                  java.nio.file.Path.of(directory), revision, verifyRetention);
+          afterFreeze.run();
+        }
+      } else {
+        try (var phase = phase("prepare_freeze")) {
+          id = layered.freezeAtQuiescentBoundary(verifyRetention);
+          afterFreeze.run();
+        }
       }
-    }
-    try (var phase = phase("prepare_prefault")) {
-      layered.prefaultBaseline();
+      observations = staged;
+      generation = id;
+      mappedBytes = layered.mappedBytes();
+      file = layered.backingFile() == null ? null : layered.backingFile().toString();
+      // A committed baseline remains blocked if cleanup or prefaulting fails.
+      eligible = false;
+      try (var phase = phase("prepare_gc")) {
+        System.gc();
+      }
+      if (verifyRetention) {
+        try (var phase = phase("prepare_retention_audit")) {
+          retentionAudit = layered.finishRetentionAudit();
+        }
+      }
+      try (var phase = phase("prepare_prefault")) {
+        layered.prefaultBaseline();
+      }
+      preparationComplete = true;
+    } catch (IOException | InterruptedException | RuntimeException | Error failure) {
+      if (layered.baselineGeneration() == null) {
+        state = State.READY;
+      } else {
+        // Publication is already committed. Failure reporting/metrics can itself run out of
+        // memory, so close admission with allocation-free stores before propagating the error.
+        state = State.PREPARED;
+        eligible = false;
+        preparationComplete = false;
+        generation = layered.baselineGeneration();
+        mappedBytes = layered.mappedBytes();
+        observations = staged;
+        this.failure = "Preparation failed after graph freeze; discard is required";
+      }
+      throw failure;
     }
   }
 
@@ -379,6 +426,7 @@ final class SharedGraphLifecycle {
     checkState(
         state == State.PREPARED && generation != null,
         "No prepared generation awaits reconciliation");
+    checkState(preparationComplete, "Preparation did not finish; discard this generation first");
     checkState(generation.toString().equals(expectedGeneration), "Generation mismatch");
     state = State.RECONCILING;
     reconciliationNanos = System.nanoTime();
@@ -443,6 +491,7 @@ final class SharedGraphLifecycle {
   void retire() {
     state = State.READY;
     generation = null;
+    preparationComplete = false;
     file = null;
     observations = ImmutableList.of();
     mappedBytes = 0;
@@ -460,9 +509,21 @@ final class SharedGraphLifecycle {
     status.put("schema_version", 1);
     status.put("mode", fallback ? "off" : mode);
     status.put("state", state.name());
+    status.put("preparation_complete", preparationComplete);
     status.put("generation", generation == null ? null : generation.toString());
     status.put("arena", file);
     status.put("mapped_bytes", mappedBytes);
+    var heap = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    status.put("heap_used_bytes", heap.getUsed());
+    status.put("heap_committed_bytes", heap.getCommitted());
+    status.put("heap_max_bytes", heap.getMax());
+    status.put("private_graph_bytes", null);
+    status.put("cache_bytes", null);
+    status.put(
+        "memory_metrics_scope",
+        "Heap bytes are whole-JVM usage; mapped bytes are arena extent, not residency."
+            + " Private graph and cache bytes are not attributed. The controller separately"
+            + " measures whole-VMM private resident bytes for its soft command-boundary budget.");
     status.put("fingerprints", observations.size());
     status.put("changed_nodes", changedNodes);
     status.put("changed_observations", changedObservations);
@@ -480,8 +541,8 @@ final class SharedGraphLifecycle {
             + " these runs cannot establish performance or physical sharing.");
     status.put(
         "phase_metrics_scope",
-        "Wall time and command-thread allocation (-1 if unavailable); heap used and GC are JVM-wide."
-            + " These are diagnostics, not retained bytes or private physical pages.");
+        "Wall time and command-thread allocation (-1 if unavailable); heap used and GC are"
+            + " JVM-wide. These are diagnostics, not retained bytes or private physical pages.");
     return status;
   }
 

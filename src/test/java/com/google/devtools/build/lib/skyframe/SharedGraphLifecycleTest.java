@@ -28,13 +28,16 @@ import com.google.devtools.build.lib.vfs.inmemoryfs.InMemoryFileSystem;
 import com.google.devtools.build.skyframe.LayeredInMemoryGraph;
 import com.google.devtools.build.skyframe.QueryableGraph.Reason;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 /** Command barrier, exact generation, retry and content-verification contracts. */
 @RunWith(JUnit4.class)
 public final class SharedGraphLifecycleTest {
+  @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
   private final InMemoryFileSystem fs =
       new InMemoryFileSystem(new ManualClock(), DigestHashFunction.SHA256);
   private final LayeredInMemoryGraph graph = new LayeredInMemoryGraph(false);
@@ -84,7 +87,8 @@ public final class SharedGraphLifecycleTest {
     lifecycle.finishReconciliation(1);
     assertThat(lifecycle.commandRejection("query")).isNull();
     assertThat(lifecycle.status().get("changed_nodes")).isEqualTo(1);
-    assertThat(lifecycle.status().get("phase_metrics").toString()).contains("prepare_capture_first");
+    assertThat(lifecycle.status().get("phase_metrics").toString())
+        .contains("prepare_capture_first");
     assertThat(lifecycle.status().get("phase_metrics_scope").toString())
         .contains("not retained bytes or private physical pages");
   }
@@ -166,6 +170,69 @@ public final class SharedGraphLifecycleTest {
   }
 
   @Test
+  public void constructionFailureReopensAdmissionWithoutCommittedBaseline() throws Exception {
+    track(write("/work/file", "x"));
+    var target = new SharedGraphLifecycle("mapped");
+    target.noteCommandResult("build", true);
+    String directory = temporaryFolder.newFile("not-a-directory").getAbsolutePath();
+    assertThrows(java.io.IOException.class, () -> target.prepare(graph, directory, "0".repeat(40)));
+    assertThat(graph.baselineGeneration()).isNull();
+    assertThat(target.status().get("state")).isEqualTo("READY");
+    String retryDirectory = temporaryFolder.newFolder("retry-arena").getAbsolutePath();
+    assertThrows(
+        IllegalStateException.class, () -> target.prepare(graph, retryDirectory, "0".repeat(40)));
+    assertThat(target.commandRejection("query")).isNull();
+    target.noteCommandResult("build", true);
+    target.prepare(graph, retryDirectory, "0".repeat(40));
+    assertThat(target.status().get("preparation_complete")).isEqualTo(true);
+    assertThat(target.status().get("state")).isEqualTo("PREPARED");
+  }
+
+  @Test
+  public void postHeapFreezeFailureBlocksCommandsAndRequiresDiscard() throws Exception {
+    assertPostFreezeFailure(lifecycle, "");
+  }
+
+  @Test
+  public void postMappedFreezeFailureBlocksCommandsAndRequiresDiscard() throws Exception {
+    assertPostFreezeFailure(
+        new SharedGraphLifecycle("mapped"), temporaryFolder.newFolder("arena").getAbsolutePath());
+  }
+
+  private void assertPostFreezeFailure(SharedGraphLifecycle target, String directory)
+      throws Exception {
+    track(write("/work/file", "x"));
+    target.noteCommandResult("build", true);
+    var injected = new OutOfMemoryError("injected after freeze, before lifecycle publication");
+    assertThat(
+            assertThrows(
+                OutOfMemoryError.class,
+                () ->
+                    target.prepare(
+                        graph,
+                        directory,
+                        "0".repeat(40),
+                        false,
+                        () -> {
+                          throw injected;
+                        })))
+        .isSameInstanceAs(injected);
+    assertThat(graph.baselineGeneration()).isNotNull();
+    assertThat(target.status().get("state")).isEqualTo("PREPARED");
+    assertThat(target.status().get("preparation_complete")).isEqualTo(false);
+    assertThat(target.status().get("failure").toString()).contains("discard is required");
+    assertThat(target.commandRejection("query")).contains("PREPARED");
+    assertThat(target.commandRejection("shared_graph")).isNull();
+    assertThat(target.commandRejection("shutdown")).isNull();
+    String generation = target.status().get("generation").toString();
+    assertThrows(IllegalStateException.class, () -> target.beginReconciliation(generation));
+    assertThat(target.status().get("state")).isEqualTo("PREPARED");
+    target.fallback();
+    assertThat(target.status().get("generation")).isNull();
+    assertThat(target.commandRejection("build")).isNull();
+  }
+
+  @Test
   public void failedReconciliationStaysBlockedAndCanRetryOrDiscard() throws Exception {
     track(write("/work/file", "x"));
     String generation = prepare();
@@ -198,6 +265,8 @@ public final class SharedGraphLifecycleTest {
     assertThrows(InterruptedException.class, () -> lifecycle.prepare(graph, "", ""));
     assertThat(Thread.interrupted()).isFalse();
     assertThat(lifecycle.status().get("state")).isEqualTo("READY");
+    assertThrows(IllegalStateException.class, () -> lifecycle.prepare(graph, "", ""));
+    lifecycle.noteCommandResult("build", true);
     lifecycle.prepare(graph, "", "");
     assertThat(lifecycle.status().get("state")).isEqualTo("PREPARED");
   }

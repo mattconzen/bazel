@@ -335,6 +335,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       status.put("promotions_by_reason", layered.promotionsByReason());
       status.put("promoted_dependency_ids", layered.copiedDependencyCount());
       status.put("copied_mapped_bytes", layered.copiedMappedBytes());
+      status.put(
+          "mapped_legacy_materialized_dependency_ids", layered.materializedDependencyCount());
     }
     return status;
   }

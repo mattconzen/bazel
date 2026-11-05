@@ -35,7 +35,9 @@ import org.junit.runner.RunWith;
 /** Runs real executor reconciliation after ordinary command-local monitors have been drained. */
 @RunWith(TestParameterInjector.class)
 public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase {
-  @TestParameter({"heap", "mapped"}) private String mode;
+  @TestParameter({"heap", "mapped"})
+  private String mode;
+
   @Rule public final TemporaryFolder arena = new TemporaryFolder();
 
   @Override
@@ -106,5 +108,47 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
                 .map(a -> a.getFilename())
                 .toList())
         .containsExactly("data.txt", "added.txt");
+  }
+
+  @Test
+  public void configurationChangeAfterRestoreReanalyzesConfiguredTargets() throws Exception {
+    scratch.file("pkg/old.txt", "old");
+    scratch.file("pkg/new.txt", "new");
+    scratch.file(
+        "pkg/BUILD",
+        "config_setting(name='new', values={'define': 'variant=new'})",
+        "filegroup(name='files', srcs=select({",
+        "    ':new': ['new.txt'],",
+        "    '//conditions:default': ['old.txt'],",
+        "}))");
+    useConfiguration("--define=variant=old");
+    update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
+    assertThat(
+            getFilesToBuild(getConfiguredTarget("//pkg:files")).toList().stream()
+                .map(a -> a.getFilename())
+                .toList())
+        .containsExactly("old.txt");
+    var executor = (SequencedSkyframeExecutor) skyframeExecutor;
+    var evaluator = executor.getEvaluator();
+    executor.setEventBus(new EventBus());
+    executor.drainChangedFiles();
+    executor.noteSharedGraphCommandResult("build", true);
+    var prepared =
+        executor.sharedGraphOperation(
+            "prepare",
+            mode.equals("mapped") ? arena.newFolder().getAbsolutePath() : "",
+            "0123456789abcdef0123456789abcdef01234567",
+            "",
+            reporter);
+    executor.sharedGraphOperation(
+        "reconcile", "", "", (String) prepared.get("generation"), reporter);
+    useConfiguration("--define=variant=new");
+    update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
+    assertThat(executor.getEvaluator()).isSameInstanceAs(evaluator);
+    assertThat(
+            getFilesToBuild(getConfiguredTarget("//pkg:files")).toList().stream()
+                .map(a -> a.getFilename())
+                .toList())
+        .containsExactly("new.txt");
   }
 }

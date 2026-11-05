@@ -16,6 +16,7 @@ package com.google.devtools.build.skyframe;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.build.lib.concurrent.ThreadSafety.ThreadHostile;
 import java.io.IOException;
@@ -37,7 +38,8 @@ import javax.annotation.Nullable;
  * decoded-entry eviction is permitted. This retains all native live-view and interning behavior.
  *
  * <p>Freezing is an internal lifecycle operation requiring external command/evaluation exclusion.
- * This class is not yet connected to a template command or to whole-VM restore reconciliation.
+ * The offline snapshot lifecycle coordinates this boundary with command admission and restore
+ * reconciliation; generations remain coupled to the matching warmed JVM snapshot.
  */
 public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
   /** Opt-in diagnostic roots. Weak references never keep the storage under audit alive. */
@@ -46,7 +48,9 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
         new java.util.LinkedHashMap<>();
 
     void track(String kind, Object value) {
-      references.computeIfAbsent(kind, ignored -> new ArrayList<>()).add(new WeakReference<>(value));
+      references
+          .computeIfAbsent(kind, ignored -> new ArrayList<>())
+          .add(new WeakReference<>(value));
     }
 
     java.util.Map<String, Object> finish() {
@@ -82,6 +86,7 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
     retentionAudit = null;
     return audit == null ? java.util.Map.of() : audit.finish();
   }
+
   public static final InMemoryGraphFactory FACTORY =
       (keepEdges, pooledInterning) -> {
         checkArgument(keepEdges, "Layered graphs require retained incremental state");
@@ -150,6 +155,16 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
   private UUID freezeAtQuiescentBoundary(
       @Nullable Path directory, @Nullable String bazelRevision, boolean verifyRetention)
       throws IOException, InterruptedException {
+    return freezeAtQuiescentBoundary(directory, bazelRevision, verifyRetention, null);
+  }
+
+  @VisibleForTesting
+  UUID freezeAtQuiescentBoundary(
+      @Nullable Path directory,
+      @Nullable String bazelRevision,
+      boolean verifyRetention,
+      @Nullable Runnable afterHandleCommit)
+      throws IOException, InterruptedException {
     checkState(!hasFrozen, "One frozen generation is supported per graph lifetime");
     var audit = verifyRetention ? new RetentionAudit() : null;
     var candidates = new ArrayList<LayeredNodeEntry.FreezeCandidate>();
@@ -192,6 +207,9 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
         var candidate = candidates.get(i);
         candidate.handle().installStorage(candidate.original(), replacements.get(i));
         committed++;
+        if (afterHandleCommit != null) {
+          afterHandleCommit.run();
+        }
       }
     } catch (InterruptedException | RuntimeException | Error failure) {
       for (int i = committed - 1; i >= 0; i--) {

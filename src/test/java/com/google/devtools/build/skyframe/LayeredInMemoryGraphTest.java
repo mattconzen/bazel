@@ -32,6 +32,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -162,6 +163,52 @@ public final class LayeredInMemoryGraphTest {
     assertThat(inflight.isDone()).isFalse();
     assertThat(graph.baselineNodeCount()).isEqualTo(1);
     assertThrows(IllegalStateException.class, this::freeze);
+  }
+
+  @Test
+  public void partialPublicationFailureRollsBackEveryHandle(
+      @TestParameter({"1", "3"}) int failAfter) throws Exception {
+    var entries = ImmutableList.of(complete("first"), complete("second"), complete("third"));
+    var values = entries.stream().map(LayeredNodeEntry::getValueMaybeWithMetadata).toList();
+    Path directory =
+        backend == Backend.MAPPED
+            ? Files.createTempDirectory(Path.of(System.getenv("TEST_TMPDIR")), "rollback-")
+            : null;
+    var commits = new AtomicInteger();
+    var injected = new OutOfMemoryError("injected during handle publication");
+    assertThat(
+            assertThrows(
+                OutOfMemoryError.class,
+                () ->
+                    graph.freezeAtQuiescentBoundary(
+                        directory,
+                        "fda97de2b3b179ecdfa8af455fffde8d0b6b6422",
+                        false,
+                        () -> {
+                          if (commits.incrementAndGet() == failAfter) {
+                            throw injected;
+                          }
+                        })))
+        .isSameInstanceAs(injected);
+    assertThat(commits.get()).isEqualTo(failAfter);
+    assertThat(graph.baselineGeneration()).isNull();
+    assertThat(graph.baselineNodeCount()).isEqualTo(0);
+    for (int index = 0; index < entries.size(); index++) {
+      var entry = entries.get(index);
+      assertThat(entry.isFrozen()).isFalse();
+      assertThat(graph.getIfPresent(entry.getKey())).isSameInstanceAs(entry);
+      assertThat(entry.getValueMaybeWithMetadata()).isSameInstanceAs(values.get(index));
+    }
+    if (directory != null) {
+      try (var files = Files.list(directory)) {
+        assertThat(files.toList()).isEmpty();
+      }
+    }
+    freeze();
+    assertThat(graph.baselineNodeCount()).isEqualTo(3);
+    for (var entry : entries) {
+      assertThat(entry.isFrozen()).isTrue();
+    }
   }
 
   @Test
