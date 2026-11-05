@@ -2,18 +2,28 @@
 
 Use this index with [TICKETS.md](../../TICKETS.md) and the
 [experiment contract](experiment-contract.md). Passing semantic tests does not
-close memory or rollout gates. Status below starts at source revision
-`2c9c47316e844323d52e686adb44634b1c881794`.
+close memory or rollout gates. The completed production/scaling comparison uses
+source `bafaaeb157b649306a41727febc52fe239275ae5`; the later preparation guard
+has separate source-test qualification. Historical diagnostics below identify
+their earlier revisions explicitly.
+
+The [published evidence](https://github.com/mattconzen/bazel-shared-graph-bench/tree/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations)
+contains all 24 production/scaling cases, 6,712 passing correctness checks,
+independent-seed lifetime statistics and reusable four-VM memory treemaps.
+Mapped first-600-second VMM PSS remains 26.4–29.7% higher than native. In the
+separate matched diagnostic, private guest file cache accounts for about 84%
+of first-analysis PSS excess; clone-zero live Java object bytes remain close.
+This points to restore verification/cache behavior, not a successful memory gate.
 
 ## Semantics and compatibility
 
 | Original requirement | Implementation / existing coverage | Remaining evidence |
 | --- | --- | --- |
-| Native evaluator and graph factory; default native behavior | `InMemoryGraphFactory`, evaluator/executor construction; factory and executor tests | Current-protocol feature-disabled cost comparison |
-| Stable handles, merged views, batch creation, deletion/recreation and interning | `LayeredNodeEntry`, `LayeredInMemoryGraph`; `LayeredInMemoryGraphTest`, `LayeredGraphContractTest` | Operational budget/fallback cases |
+| Native evaluator and graph factory; default native behavior | `InMemoryGraphFactory`, evaluator/executor construction; factory and executor tests; current-protocol disabled control | Three seed sets are descriptive, not fleet bounds |
+| Stable handles, merged views, batch creation, deletion/recreation and interning | `LayeredNodeEntry`, `LayeredInMemoryGraph`; `LayeredInMemoryGraphTest`, `LayeredGraphContractTest` | Operational edit/error/pressure cases now pass under a disclosed unit cap; broader invariant-failure injection remains |
 | Native evaluation semantics after freeze | `LayeredMemoizingEvaluatorTest`, `MappedMemoizingEvaluatorTest` inherit the ordinary suite | Maintain coverage after each semantic change |
 | Group/version preservation, equal-value dependency replacement, concurrent promotion/signaling | Inherited evaluator/node suites; `LayeredInMemoryGraphTest` | Preserve randomized seeds/failure traces with results |
-| Mapped integrity, no hidden traversal materialization, collectability and reader retirement | `MappedGraphStoreTest` | Real Envoy retained-array/retainer audit; synthetic collectability is insufficient |
+| Mapped integrity, no hidden traversal materialization, collectability and reader retirement | `MappedGraphStoreTest`; real Envoy weak-reference/retainer audit and hot materialization counts | Maintain representative retention coverage after changes |
 | Preparation/query admission, content verification and retry | `SharedGraphLifecycleTest`; Firecracker first-query receipts | Complete supported scenario-to-test mapping, including failed publication and outputs |
 | Native differencer and already-dirty entries preserved | `SharedGraphExecutorIntegrationTest`, parameterized over heap and mapped | Continue supported output/repository recovery coverage |
 | Lifecycle module precomputed inputs preserved | `BlazeCommandDispatcher.RuntimeTests` regression | Revalidate if dispatcher behavior changes |
@@ -30,9 +40,9 @@ for a hypothetical non-null configuration from this audit.
 
 ## Current test execution
 
-The following targets passed for the instrumented source. Raw logs are retained
-locally as `/tmp/shared-graph-obligations-phase-tests2.log` and
-`/tmp/shared-graph-obligations-plan-suites.log`; publish copies with final receipts.
+The following targets passed for the instrumented source. Raw logs are published
+in the evidence bundle's `test-logs/` directory. Later guard qualification and
+its preserved failed expectation are identified separately below.
 
 - `//src/test/java/com/google/devtools/build/lib/skyframe:SharedGraphLifecycleTest`
 - `//src/test/java/com/google/devtools/build/lib/skyframe:SharedGraphExecutorIntegrationTest`
@@ -91,15 +101,15 @@ totals cannot close a retained-byte gate.
 
 | Ticket | Evidence being collected | Acceptance status |
 | --- | --- | --- |
-| SG-001 | Four-clone/600-second contract, source/image/runtime pins, fresh references | Four-arm warmed diagnostic controls complete; production lifetime pending |
+| SG-001 | Four-clone/600-second contract, source/image/runtime pins, fresh references | All twelve production and twelve scaling cases complete under one protocol |
 | SG-002 | Exact joint retained sets and value-family retention with Eclipse MAT | Sixteen matched stages complete, with calibrated sizes/unknowns and class-only retainer paths |
 | SG-003 | Real retainer audit plus promotion/materialization counters | Real Envoy audit reports zero survivors in all tracked replaced-storage families; useful-work residual arrays match native promotions |
-| SG-004 | Common snapshot identity/offsets and resident file PTEs, VMM PSS and unit charges | Arena-specific durability and complete-host accounting unresolved |
-| SG-005 | Per-phase command-thread allocation, heap use, GC and wall diagnostics | Filesystem verification 1,502.68 MiB and arena validation 221.85 MiB allocated in the pre-fix probe; corrected comparison pending |
-| SG-006 | Only evidence-backed fixes | Fingerprint allocation fell from 1,502.68 to about 41.96 MiB per clone; streaming restore validation is the next isolated correction |
-| SG-009/SG-010 | Comparable native/off/heap/mapped production lifetime and explicit gate table | Prior corrected mapped memory results failed in VMM scope; current acceptance pending |
+| SG-004 | Common snapshot identity/offsets, resident file PTEs and direct guest-frame ownership joined to host PSS | Four-VM attributed captures complete; two-VM arena probe proves sharing is lost during reconciliation; complete-host accounting remains unresolved |
+| SG-005 | Phase allocation, heap/GC, wall diagnostics and four-VM page-owner treemaps | About 84% of first-analysis PSS excess is assigned to private guest file cache; unknown ownership remains explicit |
+| SG-006 | Two measured allocation corrections and controlled after-probes | Fingerprints fell from 1,502.68 to 41.96 MiB/clone; arena validation fell from 221.85 MiB to 86,720 bytes. Full content I/O remains |
+| SG-009/SG-010 | Comparable native/off/heap/mapped lifetime, scaling and explicit gate table | All 24 cases pass 6,712 checks; mapped first-600-second VMM PSS is 26.4–29.7% higher. Total-host/fleet bounds are not established |
 | SG-011–SG-013 | Payload decision and adapter only if justified | Deferred behind earlier decision |
-| SG-014/SG-015 | Budget, fallback, retirement and operational failures | Integrated command-boundary budget and generation leases; real native fallback probe passes; broader failure/pressure cases remain |
+| SG-014/SG-015 | Budget, fallback, retirement and operational failures | Integrated command-boundary budget and generation leases; five operational diagnostics pass 32 checks under their disclosed 16 GiB caps; broader invariant-failure coverage remains |
 | SG-016 | Long-lived operational validation and canary | Blocked on acceptance and controls |
 
 Offline retained sets for different categories/value families overlap. Report
@@ -147,7 +157,7 @@ families are released, not complete host-memory savings.
 | Equal-value pruning/version clock | Executor reconciliation retains evaluator identity and unrelated dirty state; inherited evaluator contracts | Module runtime regression preserves warmed precomputed inputs |
 | Corrupt/truncated/mismatched arena | MappedGraphStoreTest covers checksum, trailing/truncated data, offsets, group boundaries, key handles, duplicate reverse edges, generation/revision/key table mismatches | Validating the checksum saved in the warmed JVM also rejects a rewritten arena with a newly valid disk checksum |
 | Reader retirement/reset | Mapped retained-reader test keeps direct and reverse readers useful after generation cleanup | Controller VM leases additionally prevent deletion of snapshot assets while a VMM process is alive |
-| Runtime budget/fallback | Controller command-boundary policy calls full native evaluator discard, then verifies actions and archives | Real Envoy threshold exercise pending; private VMM bytes are broader than graph bytes |
+| Runtime budget/fallback | Controller command-boundary policy calls full native evaluator discard, then verifies actions and archives | Real edit/error/pressure thresholds recover in the same JVM with fresh-native outputs under a disclosed unit cap; private VMM bytes are broader than graph bytes |
 
 This audit records supported contracts and the remaining representative evidence.
 It does not check every SG-008 item merely because related native suites passed.
@@ -225,3 +235,62 @@ binary. It retained unchanged arena digests, ordinary action/archive equivalence
 and safe generation retirement. The differently pinned earlier protocol-transition
 probe is excluded from acceptance. Production CPU, latency and total-host memory
 remain separate pending gates.
+
+
+## Preparation failure-path regression
+
+An additional audit found that phase-metric cleanup or metadata allocation could
+throw after the graph committed its frozen baseline, before lifecycle admission
+closed. The new guard reserves admission before freeze and reopens it after a
+failed construction only when no baseline was committed. Post-freeze failure
+keeps the generation blocked and requires full discard; an incomplete preparation
+cannot be reconciled into READY. Successful reconciliation failures still permit
+the existing retry path.
+
+A failed preparation consumes its preceding-successful-build token. Ordinary
+commands remain available before commit, but another preparation requires a new
+successful analysis build rather than freezing after a potentially changing
+filesystem capture. The construction-failure regression covers that recovery.
+
+Heap/mapped post-freeze error injection and precommit construction-failure tests
+pass. Additional heap/mapped cases inject failure after the first and
+last handle commits and require complete rollback, removal of unpublished arena
+storage and a successful retry. An executor test changes a `select()` configuration
+after reconciliation and requires reanalysis while preserving the evaluator.
+These regressions passed after the performance matrix, together with the
+aggregate Skyframe, executor integration and runtime suites. The first attempt
+exposed an old test expecting immediate retry after interruption; it now checks
+the consumed admission token and performs fresh analysis before retrying.
+The measured cohorts remain pinned to binary
+`bafaaeb157b649306a41727febc52fe239275ae5`, which predates this admission guard;
+no acceptance result is silently transferred to the later code.
+
+The final status surface also exposes whole-JVM used/committed/maximum heap,
+mapped legacy-materialization counts, and explicitly unattributed private-graph
+and cache-byte fields. Arena extent, JVM heap and the controller's whole-VMM
+private-resident budget have separate scopes; these fields must not be summed.
+
+## Completed operational cases and stage decision
+
+[Five two-VM cases and exact receipts](https://github.com/mattconzen/bazel-shared-graph-bench/tree/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations/operational-diagnostics/README.md)
+pass 32 checks. Missing/corrupted generated outputs are rebuilt to fresh-native
+hashes. Thresholds during edit, compiler error/recovery and held pressure each
+confirm two native fallbacks with unchanged JVM identities and no pending PIDs.
+All generations retire with zero leases, and arena digests remain unchanged.
+Every 16 GiB diagnostic unit hits its memory cap (no OOM/swap), so none supplies
+unconstrained memory/performance credit.
+
+The arena probe first proves 31,076,352 common resident arena bytes, then zero
+following reconciliation. Useful-work, GC, held pressure, cache eviction and
+controlled pageout/refault do not restore sharing; witnessed resident arena
+pages refault as private CoW. An independent uncapped four-VM capture observes
+all four arenas evicted during reconciliation. Byte immutability is preserved,
+physical sharing is not.
+
+[The acceptance decision](https://github.com/mattconzen/bazel-shared-graph-bench/tree/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations/README.md#acceptance-decision)
+is to refine restoration, keep defaults off, defer payloads and block canary.
+VMM PSS is worse across all three production seed pairs. Full-host accounting,
+overall CPU/fleet p95 bounds, some external-refresh/fault-injection scenarios and
+payload fanout/materialization rankings remain open. The broadened graph-sharing
+hypothesis is not disproved. The committed regression tool checks compatible
+single-cohort captures and attribution coverage, not fleet acceptance.

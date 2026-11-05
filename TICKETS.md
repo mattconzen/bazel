@@ -10,10 +10,10 @@ Document SHA-256:
 `f7fe7e818d38f9a98bcde497d89fd7f72c5f10ed2f5329048ec1601c0845c8c4`.
 Section numbers and PR stages below refer to that document, not GitHub PR numbers.
 
-## Starting point
+## Starting point at the original backlog review
 
 Reviewed Bazel revision: `832e42bc589a6c77516b8d01b4476ccd80ac2b77`.
-The latest tested binary was built from
+At that review, the latest tested binary was built from
 `8ff24041b3b56434884157474972ce4d30510bed`; the subsequent commit changes
 measurement documentation only. Controller/evidence revision:
 `69788d7d394521195b47e0811832b84bee27dc81`.
@@ -37,16 +37,63 @@ by the user. [The experiment contract](docs/shared-graph/experiment-contract.md)
 fixes the comparison and [the evidence index](docs/shared-graph/obligation-evidence.md)
 tracks implemented checks, failed diagnostic attempts and unresolved gates.
 The measured first correction reuses fingerprint buffers; its source tests pass,
-and its allocation/host-memory effect still requires the pinned comparison.
+and a pinned probe reduces fingerprint allocation from 1,502.68 to 41.96 MiB per
+clone. Allocation reductions do not establish a host-memory saving.
 An opt-in real-graph weak-reference audit is implemented and tested, including
 a deliberately retained array that must be reported as surviving. Matched
 four-arm diagnostic collection and the two-clone retention/buffer and native
-fallback probes are complete. [Published attribution evidence](https://github.com/mattconzen/bazel-shared-graph-bench/tree/42e11e66c4c325f7b7c592bafb8cc433abffac28/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations)
+fallback probes are complete. [Published attribution evidence](https://github.com/mattconzen/bazel-shared-graph-bench/tree/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations)
 separates retained objects, allocation and physical memory. The second measured
 correction streams the saved validated-arena digest during restore. Its corruption
-and restore regression suites pass; its after-probe and the production lifetime
-comparison remain pending. No acceptance gate is inferred
+and restore regression suites pass; its matched after-probe passes thirteen
+checks and measures 86,720 bytes allocated for validation per clone, versus
+221.85 MiB before. All twelve production lifetime cases and all twelve scaling
+cases are complete, with 6,712 passing correctness checks.
+All three native/mapped production pairs pass correctness and sustained pressure
+without host-limit or swap exclusions. Mapped VMM PSS is 26.4–29.7% higher than
+native over the first ten minutes (median 27.9%). The disabled control ranges
+from 1.4% lower to 1.4% higher PSS than native across the three seeds. The
+separate four-VM physical attribution is complete. Five two-VM operational cases
+pass 32 checks; every 16 GiB diagnostic unit hit its cap and is excluded from
+performance. Private guest file cache accounts for about 84% of the first-analysis
+PSS excess, while post-GC live Java objects remain close to native. Arena sharing
+disappears during reconciliation in both capped and uncapped captures. These
+scope-limited results do not establish total-host acceptance. No gate is inferred
 from these implementation checkmarks.
+
+## Recorded acceptance decision
+
+**Refine the restore path. Keep native/off as the default, defer payload adapters,
+and block canary rollout.** [The immutable gate table](https://github.com/mattconzen/bazel-shared-graph-bench/tree/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations/README.md#acceptance-decision)
+records the distinction between evaluating a gate and passing it.
+
+| Gate | Status |
+| --- | --- |
+| Tested semantic comparisons | 6,712 matrix checks pass; 32 constrained operational checks pass; unsupported/failure scenarios remain open |
+| 25% lower total resident host memory | Not achieved; VMM PSS increases 26.4–29.7%, unit charges also increase; exact complete-host gate unresolved |
+| ≤5% CPU and ≤10% p95 overhead | Descriptive fixed-analysis ranges meet the numerical limits; overall-work/fleet bounds unresolved |
+| Durable shared arena and lifetime savings | Fails for the tested restore path: reconciliation evicts arena pages and subsequent reads refault privately |
+| PR1/PR2 disabled-cost gate | Three disabled/native seed pairs range from −1.4% to +1.4% PSS; no fleet/noise bound claimed |
+| PR3/PR4 readiness | Replaced storage is released and bytes remain immutable; private-memory benefit and full operational coverage are incomplete |
+| Payload/canary | Deferred/blocked, respectively |
+
+This closes the dependency-stage investigation with a negative implementation
+result, not the original success criterion or the broader hypothesis. The next
+bounded optimization is trustworthy filesystem reconciliation without repeated
+full-content scans and their guest-cache duplication; it requires a separate
+before/after experiment with the same physical stages and unchanged gates.
+Unchecked attribution/compatibility items remain genuine work. Conditional
+payload tasks do not authorize an adapter, and no rollout is approved.
+
+The reusable collector, renderer, raw metadata and regression CLI are committed
+in the owned controller fork. Replay regenerates every output hash without VM
+assets. First-analysis unknown ownership is 8.73% for mapped: the default 5%
+coverage screen correctly refuses that stage. Restore/post-verification screens
+pass; synthetic growth and incompatible inputs fail as expected.
+
+The later preparation guard and failure injections are source-qualified
+separately from the measured `bafaaeb157` binary; exact final build qualification
+is attached to the fork PR. No measured performance is transferred to later code.
 
 ## Execution rules and order
 
@@ -82,7 +129,7 @@ from these implementation checkmarks.
 - [x] Define the representative related-branch workload, expected production
   clone count and VM lifetime. State exactly which analysis, compilation and
   linking work is exercised; existing Envoy runs do not build the full executable.
-- [ ] Establish the current-protocol unmodified warmed control and its native
+- [x] Establish the current-protocol unmodified warmed control and its native
   source revision. Keep patched-off as a separate control and cold JVMs as context.
 - [x] Predeclare repetitions, ordering, uncertainty estimates, constrained-run
   exclusions and the CPU/latency measurement scope. Keep the original 25% memory,
@@ -131,7 +178,7 @@ material opportunity. This closes the missing PR0 attribution requirement.
   reconstruct or cache the complete graph.
 - [ ] Correlate promotion/materialization counters with retained bytes and
   actual recomputation through no-op, edit and revert sequences.
-- [ ] Verify published arena bytes remain unchanged through useful work, GC,
+- [x] Verify published arena bytes remain unchanged through useful work, GC,
   pressure and recovery; retain digests and generation identities.
 
 **Done when:** every claimed offloaded storage family has representative
@@ -155,7 +202,7 @@ are attributed. Synthetic weak-reference tests alone do not close this ticket.
 - [ ] Measure absolute and marginal memory per clone at restore, reconciliation,
   first work, steady work, GC, pressure and recovery. Include reads that increase
   residency even without dirtying pages.
-- [ ] Record pressure-induced reclaim and useful refault separately from explicit
+- [x] Record pressure-induced reclaim and useful refault separately from explicit
   cold-cache eviction. Determine whether host sharing survives each mechanism.
 
 **Done when:** the report can support a total resident host-memory comparison and
@@ -195,7 +242,7 @@ alone is not evidence that restoration preserves physical sharing.
   concurrency contracts, native invalidation and generation/integrity checks.
 - [x] Run the relevant existing regression suites and add cases for changed
   contracts or discovered failures; build `//src:bazel-dev` and pin its digest.
-- [ ] Repeat the affected diagnostic and controlled comparison. Retain failed
+- [x] Repeat the affected diagnostic and controlled comparison. Retain failed
   attempts and reject changes whose extra costs erase their benefit.
 
 **Done when:** each retained fix has attributed before/after evidence and semantic
@@ -215,9 +262,10 @@ does not authorize unrelated architectural redesign.
   reproducible seeds and traces for randomized tests.
 - [x] Audit pruning, target counting, dump and serialization consumers for
   concrete casts, destructive operations and hidden array reconstruction.
-- [x] Close the source-version metadata gap: implement an exact completed-state
-  adapter where support is required. Until then, retain explicit rejection,
-  document unsupported configurations and keep that preservation obligation open.
+- [x] Audit source-version metadata against the pinned native implementation.
+  Its completed incremental entries return null, which freeze preserves. Retain
+  explicit rejection for non-null metadata; a future native configuration that
+  supports it requires an exact completed-state adapter before activation.
 - [x] Verify current-code evidence for `SkyframeTests`, relevant node/evaluator/
   invalidator suites and the seven integration targets below. Ordinary passing
   native tests alone do not establish layered-backend coverage.
@@ -241,7 +289,7 @@ loses semantics. Open compatibility obligations remain visible.
 - [x] Audit exclusion of commands, evaluation, repository activity, graph cleanup
   and pending invalidation through preparation/publication. Verify dirty entries
   remain mutable and unsuccessful/in-flight/discarded-analysis states are rejected.
-- [ ] Exercise cancellation/partial failure during conversion and publication:
+- [x] Exercise cancellation/partial failure during conversion and publication:
   restore original handles, remove unpublished temporary storage and preserve a
   usable graph before publication; remain blocked after a post-freeze failure.
 - [ ] Cover first-command queries, lost watcher continuity, stale metadata caches,
@@ -250,7 +298,7 @@ loses semantics. Open compatibility obligations remain visible.
 - [ ] Cover missing/changed generated outputs, output rewinding, environment and
   configuration changes, transient errors and external connection refresh.
   Preserve warmed lifecycle inputs and the evaluator version clock.
-- [ ] Compare two clones changing the same key differently against ordinary
+- [x] Compare two clones changing the same key differently against ordinary
   incremental and fresh native builds, including diagnostics and action/cache keys.
 - [ ] Exercise corrupt/truncated/mismatched generations, retry after reconciliation
   failure, discard, shutdown/reset/clean with live readers, and generation lifetime.
@@ -263,9 +311,9 @@ ordinary commands cannot bypass reconciliation, and clones evolve independently.
 **Plan:** §§8/PR0–PR4, 10. **Owner:** runtime, with graph review.
 **Depends on:** SG-001 through SG-008 evidence relevant to the tested revision.
 
-- [ ] Run unmodified warmed, patched-off, layered-heap and mapped-dependency arms
+- [x] Run unmodified warmed, patched-off, layered-heap and mapped-dependency arms
   on the same protocol. Add the payload arm only if SG-012 is completed later.
-- [ ] Measure 1, 2, 4, 8 and the expected production clone count. Provide enough
+- [x] Measure 1, 2, 4, 8 and the expected production clone count. Provide enough
   host capacity for unconstrained comparisons; report capped runs separately.
 - [ ] Exercise no-op, leaf, BUILD/Starlark and high-fanout edits; related/unrelated
   branches; revert; errors/recovery; and repeated work across several GC cycles.
@@ -275,10 +323,10 @@ ordinary commands cannot bypass reconciliation, and clones evolve independently.
 - [ ] Measure feature-disabled overhead against unmodified Bazel and establish
   whether it lies within measured noise. Keep correctness verification outside
   timed windows and disclose its effects on between-round resident memory.
-- [ ] Repeat under representative sustained pressure, verify reclaim, allocator
+- [x] Repeat under representative sustained pressure, verify reclaim, allocator
   survival, useful refault and post-pressure correctness. Preserve killed-helper
   profiles as failures; post-kill memory is not a held-load saving.
-- [ ] Report absolute bytes and uncertainty from independent seeds, not repeated
+- [x] Report absolute bytes and uncertainty from independent seeds, not repeated
   samples treated as independent runs. Keep older code/protocol results separate.
 
 **Done when:** the declared matrix has a complete auditable result set, including
@@ -290,18 +338,18 @@ or uncertainty is recorded as an unresolved gate, not evidence of success.
 **Plan:** §§8/PR0–PR4, 10, 12. **Owner:** both.
 **Depends on:** SG-002 through SG-009.
 
-- [ ] Record PR0 completion: repeatable controls and largest memory categories.
-- [ ] Record PR1/PR2 completion: native cost within measured noise and required
+- [x] Record PR0 status: repeatable controls and largest memory categories.
+- [x] Record PR1/PR2 status: native cost within measured noise and required
   semantics preserved across native and layered implementations.
-- [ ] Record PR3 completion: replaced arrays absent, arena bytes unchanged and
+- [x] Record PR3 status: replaced arrays absent, arena bytes unchanged and
   real incremental work consuming less private memory; quantify a small edge
   opportunity explicitly if that is the result.
-- [ ] Record PR4 completion: all required resume/lifecycle cases pass with
+- [x] Record PR4 status: all required resume/lifecycle cases pass with
   independent clones and a verified host backing path.
-- [ ] Evaluate zero semantic mismatches, at least 25% lower total resident host
+- [x] Evaluate zero semantic mismatches, at least 25% lower total resident host
   memory, no more than 5% CPU overhead and 10% p95 regression, with savings
   surviving representative lifetime, GC and pressure.
-- [ ] Publish a pass/fail/unresolved table and a proceed/refine/stop decision.
+- [x] Publish a pass/fail/unresolved table and a proceed/refine/stop decision.
   If promotion or retained Java costs erase savings, stop at that result. Any
   revised target or new storage direction must be explicit and evidence-based.
 
@@ -320,7 +368,7 @@ closing this decision ticket with failure must not mark those gates complete.
   caller-retained copies and continued Java identity requirements.
 - [ ] Audit public type, equality, hashing, streaming, identity and mutation
   contracts; identify APIs that require concrete strings/arrays/materialization.
-- [ ] Record one selected family and why it is justified, or defer payload work.
+- [x] Record one selected family and why it is justified, or defer payload work.
   A failed earlier gate does not automatically authorize expansion; document
   the deliberate change to the experimental sequence before proceeding.
 
@@ -369,14 +417,14 @@ implement the adapter without a general artifact-identity redesign.
 **Plan:** §§4, 8/PR6, 11. **Owner:** both.
 **Depends on:** SG-002 accounting and SG-008 lifecycle contracts.
 
-- [ ] Define and expose mode, generation, promotion reason, mapped/heap/private
+- [x] Define and expose mode, generation, promotion reason, mapped/heap/private
   bytes, cache bytes, reconciliation duration and fallback reason. Label estimates
   and unmeasured quantities; avoid per-record writes in immutable pages.
 - [x] Add a coarse private-memory budget and schedule full fallback at a safe
   command boundary when exceeded. Include measured cache/materialization costs.
 - [x] Preserve dirty/deleted validity state until the evaluator is safely detached;
   never erase markers or silently reuse baseline data to satisfy a budget.
-- [ ] Test the threshold during edits, errors and pressure; verify observability
+- [x] Test the threshold during edits, errors and pressure; verify observability
   and correctness with ordinary templates available for fallback.
 
 **Done when:** operators can identify private growth and fallback causes, and
@@ -390,7 +438,7 @@ budget enforcement cannot resurrect stale values or interrupt graph invariants.
 - [ ] Stop baseline use on runtime invariant failure, cancel affected work and
   restart with an ordinary evaluator. Replay only where proven safe; otherwise
   return an explicit failure. Automatic replay is not a prerequisite for safety.
-- [ ] Verify compatibility/integrity rejection and failed reconciliation never
+- [x] Verify compatibility/integrity rejection and failed reconciliation never
   admit ordinary builds or queries before successful retry/full fallback.
 - [x] Coordinate graph, reader, VM and controller lifetime so reset/clean/shutdown
   and generation retirement cannot unmap, rewrite or truncate live backing files.
@@ -425,16 +473,16 @@ rollback. Until then the default remains native/off and rollout is incomplete.
 
 **Plan:** §§8–12. **Owner:** both. **Depends on:** update as each ticket closes.
 
-- [ ] Update [experiment status](docs/shared-graph/README.md),
+- [x] Update [experiment status](docs/shared-graph/README.md),
   [measurement requirements](docs/shared-graph/measurement.md), lifecycle/storage
   docs and fork PR descriptions with explicit stage status and immutable evidence.
-- [ ] Label historical milestone descriptions and earlier benchmark protocols so
+- [x] Label historical milestone descriptions and earlier benchmark protocols so
   statements such as "no restore barrier" cannot be mistaken for current behavior.
-- [ ] Maintain a requirement-to-ticket/test/artifact index, source/binary/image
+- [x] Maintain a requirement-to-ticket/test/artifact index, source/binary/image
   identities, reproduction commands, uncertainty and known unsupported modes.
-- [ ] Preserve negative results and capacity failures. Mark conditional payload
+- [x] Preserve negative results and capacity failures. Mark conditional payload
   work deferred when unselected and blocked rollout work incomplete.
-- [ ] Record the final success or stop decision without presenting completed
+- [x] Record the final success or stop decision without presenting completed
   implementation checklists as proof of memory savings.
 
 **Done when:** the repository gives one consistent, source-backed account of

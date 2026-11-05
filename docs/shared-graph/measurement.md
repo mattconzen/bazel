@@ -1,6 +1,7 @@
 # Measurement tools and open acceptance gates
 
-These tools collect evidence; they do not create VMs or establish memory savings.
+The local samplers collect process evidence; the forked Firecracker harness
+creates VM cohorts. Neither tool establishes memory savings by itself.
 The mapped graph is an experimental prototype with explicit preparation,
 command admission and restore reconciliation in the forked Firecracker harness.
 Physical-memory acceptance remains conditional on representative runs.
@@ -55,6 +56,64 @@ it. The script does not measure unrepresented backing-file cache, cgroup kernel
 memory, guest GC or build actions. Its metadata labels backing-file cache
 unmeasured. Add that accounting without double-counting mapped pages before
 claiming total fleet memory savings.
+
+### Current Envoy lifetime sampler
+
+The Envoy controller uses
+[`cohort_metrics.memory_snapshot`](https://github.com/mattconzen/bazel-shared-graph-bench/blob/f15ca6725771b4bf9e1284747fadf170d8f0441f/apps/firecracker-bench/pocs/bazel-memory/common/cohort_metrics.py)
+for the explicitly launched clone VMM PIDs. It reads the host's
+`/proc/PID/smaps_rollup`, converts `Pss` from kernel kB to bytes using 1024, and
+sums those VMMs. Start-time checks bracket each collection. The observations
+are sequential, not an atomic snapshot; collection duration is recorded.
+
+Linux apportions a resident page among its mappings. With four sole mappers,
+one shared 4 KiB page contributes about 1 KiB per VMM and 4 KiB to their sum;
+four private copies contribute 16 KiB to the sum. This is kernel PSS accounting,
+not an estimate from arena size or guest heap use. See the
+[kernel's PSS definitions](https://docs.kernel.org/filesystems/proc.html).
+
+The lifetime sampler collects approximately once per second after reconciliation.
+The ten-minute figure integrates the aggregate PSS curve with trapezoids and
+interpolates the 600-second edge, dividing by the actually covered time. Initial
+sampling delay and actual full duration remain in the receipt. The separate first
+analysis point precedes its deferred action-query verification; the lifetime curve
+includes verification between timed commands.
+
+VMM PSS includes resident guest RAM (JVM, guest kernel, guest processes and guest
+cache) and Firecracker userspace overhead. Guest JVM PSS is not added separately.
+Host cache without resident VMM mappings, host kernel allocations and external
+controllers are outside this sum. Dedicated-unit `memory.current` is recorded as
+another, overlapping scope: it includes charges for the unit's processes, kernel
+memory and file cache, subject to cgroup ownership. These numbers must not be
+added together or relabeled as complete host memory. Page attribution to the
+arena requires the separate diagnostic; PSS alone cannot identify which guest
+objects occupy shared pages.
+
+### Reusable physical-memory treemaps
+
+The controller's [memory-attribution tool](https://github.com/mattconzen/bazel-shared-graph-bench/blob/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/MEMORY_ATTRIBUTION.md)
+collects host VMM mappings and resident page-table flags, plus a deduplicated
+guest physical-frame ownership ledger. It stops JVM threads during guest
+inspection and pauses all VMMs during host inspection. It separates Java heap,
+frozen arena, other guest userspace, filesystem cache, slab, page tables, free
+frames and unknown ownership, with private versus snapshot-file backing.
+Every physical partition must reconcile to kernel PSS; unknowns stay visible.
+
+Compressed page ledgers and their hashes permit regeneration of PNG/SVG/PDF
+treemaps. A separate JVM histogram supplies post-GC shallow object bytes, never
+added to physical PSS. The regression CLI requires compatible complete captures
+and explicit memory-growth and unknown-ownership tolerances. It rejects missing
+VMs, changed evidence, limit-constrained captures and inconsistent partitions.
+One matched diagnostic pair is a regression screen, not a fleet acceptance test.
+[Published four-VM captures and treemaps](https://github.com/mattconzen/bazel-shared-graph-bench/tree/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations/memory-attribution)
+pass correctness and kernel-PSS reconciliation. Regeneration from copied metadata
+reproduces attribution and all output hashes without VM assets. Private guest
+file cache accounts for about 84% of their first-analysis PSS difference; live
+post-GC object bytes remain close. Unknown ownership is 8.73% for mapped at
+first analysis, so a 5% coverage screen refuses that stage. After-reconciliation
+and post-verification mapped stages have 2.69% and 3.21% unknown ownership and
+support that stricter screen. Diagnostic capture effects and scope remain
+separate from production performance results.
 
 ## Required experiment
 

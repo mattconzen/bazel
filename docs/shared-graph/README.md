@@ -6,13 +6,13 @@ baseline is `fda97de2b3b179ecdfa8af455fffde8d0b6b6422`.
 
 | Plan stage | Current result | Remaining acceptance work |
 | --- | --- | --- |
-| PR 0: measurement | Sixteen matched Envoy retained-heap stages, calibrated sizes/unknowns, phase allocation and backing/PSS tools | Production lifetime comparison and complete-host reconciliation |
-| PR 1: interfaces | Factory, dependency reader and consumer migrations implemented/tested | Feature-disabled performance comparison |
+| PR 0: measurement | Sixteen retained-heap stages, all 24 production/scaling cases, calibrated sizes/unknowns and reusable direct VMM treemaps | Complete-host reconciliation and fleet bounds |
+| PR 1: interfaces | Factory, dependency reader and consumer migrations implemented/tested; disabled control measured | Three seed sets do not establish a fleet confidence bound |
 | PR 2: heap prototype | Stable handles, freeze/promotion and membership semantics pass inherited and seeded contracts; local process-bound generation leases | Production deployment/retirement failure coverage |
-| PR 3: mapped vectors | Validated read-only direct/reverse vectors pass semantic, integrity, GC and reader-lifetime tests | Real-workload private-memory and physical-sharing gate |
-| PR 4: snapshot lifecycle | Startup modes, preparation barrier, content reconciliation and existing Firecracker controller integration implemented | Two-clone correctness smokes pass; representative performance/pressure gates remain |
+| PR 3: mapped vectors | Semantic/integrity/retention tests pass; real dependency storage is released | Current restore path fails the private-memory and durable-sharing objective |
+| PR 4: snapshot lifecycle | Startup modes, barrier, content reconciliation, failure guard and controller integration implemented/tested | All 6,712 matrix checks pass; memory/fleet bounds and unsupported external-refresh cases remain |
 | PR 5: payloads | Deferred | Choose only after retained-memory measurements |
-| PR 6: operations | Soft command-boundary private-resident budget, real native fallback and generation lease tests pass | Error/pressure threshold coverage, canary and rollout gates |
+| PR 6: operations | Soft command-boundary private-resident budget, real native fallback and generation lease tests pass | Edit/error/pressure threshold checks pass under a disclosed unit cap; remaining runtime-failure coverage, canary and rollout gates |
 
 The normal Bazel server still uses the native graph. Experimental heap and mapped backends reuse the existing evaluator. Startup activation is experimental and requires the preparation and restore
 barriers described in [the lifecycle integration](snapshot-lifecycle.md).
@@ -29,15 +29,22 @@ Implementation and reproduction details:
 - [Remaining obligations](../../TICKETS.md), [fixed experiment contract](experiment-contract.md)
   and [requirement/evidence index](obligation-evidence.md)
 
-The [published attribution bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/42e11e66c4c325f7b7c592bafb8cc433abffac28/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations)
+The [published measurement bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations)
 shows that real Envoy template GC releases every tracked old delegate/array/
 reader in the mapped audit. Native dependency storage is a small logical-heap
 opportunity after replacement overhead; this is not the original 25% host-memory
 result. Reusing fingerprint buffers reduces restore allocation from about 1503
 to 42 MiB per clone. A separately tested correction removes repeated structural
 validation of an already-validated arena, retaining exact saved-checksum checks.
-The four-clone, ten-minute production comparison is pending. Payload adapters
-and canary rollout remain conditional; no broader hypothesis has been disproved.
+All twelve four-clone production cases and twelve scaling cases are complete.
+Mapped VMM PSS is 26.4–29.7% higher over the first ten useful minutes. Direct
+four-VM attribution assigns about 84% of first-analysis excess to private guest
+filesystem cache; live Java object bytes remain close to native. The uncapped
+capture also observes every mapped arena evicted during reconciliation, then
+private refault after verification. The next investigation must preserve a
+trustworthy filesystem difference while avoiding this restore/cache cost.
+Payload adapters and canary rollout remain conditional; no broader hypothesis
+has been disproved by this implementation-level failure.
 
 The following smoke and generated-fixture results are historical protocols,
 separate from the current Envoy attribution and acceptance comparison.
