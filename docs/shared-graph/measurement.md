@@ -1,5 +1,10 @@
 # Measurement tools and open acceptance gates
 
+The [current contract](experiment-contract.md#objective-amendment--2026-11-05)
+prioritizes physical sharing and total resident host memory. Speed and execution
+time are deferred: CPU, latency/p95, throughput, preparation duration and restore
+duration are optional diagnostics, with no targets or acceptance gates.
+
 The local samplers collect process evidence; the forked Firecracker harness
 creates VM cohorts. Neither tool establishes memory savings by itself.
 The mapped graph is an experimental prototype with explicit preparation,
@@ -127,14 +132,14 @@ repeated commands/GC and guest memory pressure/refaulting. Begin with KSM off.
 Collect raw repeated trials, absolute bytes and uncertainty. Check output,
 action/cache-key, query, dependency, exit-status and diagnostic equivalence
 against both ordinary incremental and fresh builds. Record template conversion
-time/peak, retained heap, committed/resident heap, backing-file I/O, faults,
-CPU/GC, throughput, p95 latency, bytes promoted versus bytes recomputed and
-long-lived divergence. The initial gates remain zero semantic mismatches, no
+peak, retained heap, committed/resident heap, backing-file I/O, faults,
+GC activity, bytes promoted versus bytes recomputed and long-lived divergence.
+The current gates are zero semantic mismatches, no
 retained arrays claimed as offloaded, unchanged arena bytes, at least 25% lower
-fleet resident memory, at most 5% CPU overhead and 10% p95 latency regression,
-with savings surviving realistic VM lifetime and memory pressure.
+fleet resident memory, with physical sharing and savings surviving useful work,
+realistic VM lifetime, GC and memory pressure.
 
-No physical-memory, fleet-performance, whole-VM resume or rollout gate has been
+No physical-memory, sharing, whole-VM resume or rollout gate has been
 claimed by the current storage tests. Payload selection and rollout remain
 conditional on these measurements.
 
@@ -186,6 +191,7 @@ helper and both mapped helpers. All 230 recovery/correctness checks still passed
 with inherited Bazel servers; post-kill memory is not a held-load saving.
 
 This does not establish the plan's complete-host, physical-sharing,
-retained-byte or CPU/p95 rollout gates. Keep the backend off by default. Detailed
+retained-byte or lifecycle rollout gates. Speed is no longer a rollout gate.
+Keep the backend off by default. Detailed
 provenance and pressure/recovery evidence are in the
 [controller results](https://github.com/mattconzen/bazel-shared-graph-bench/blob/69788d7d394521195b47e0811832b84bee27dc81/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-envoy-reuse/README.md).

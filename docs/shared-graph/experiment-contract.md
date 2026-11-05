@@ -1,7 +1,22 @@
-# Original-plan completion protocol
+# Shared-graph memory experiment contract
 
 This protocol closes the evidence gaps tracked in [TICKETS.md](../../TICKETS.md).
-It preserves the original dependency-first architecture and decision targets.
+It preserves the original dependency-first architecture and the current memory,
+correctness and lifecycle targets.
+
+## Objective amendment — 2026-11-05
+
+The user removed all speed and execution-time goals. CPU overhead, latency/p95,
+throughput, startup/preparation time and restore/reconciliation duration have no
+targets or acceptance thresholds and cannot block a memory-sharing result or
+rollout decision. Speed optimization is deferred, including the earlier proposed
+one-second restore target. Timing and CPU counters may remain as optional
+diagnostics. This amendment supersedes the original plan's speed criteria and
+older reports that list them as pending gates; historical evidence stays intact.
+
+The goals are lower total resident host memory and durable physical sharing,
+with correct incremental behavior and safe lifecycle handling. The ten-minute
+VM lifetime measures durability; it is not a command-completion deadline.
 
 ## Workload and decision
 
@@ -16,9 +31,10 @@ executable compile/link measurement.
 The production comparison is four clones over at least 600 seconds after
 reconciliation. Exercise no-ops, leaf/BUILD/Starlark edits, edit/revert,
 errors/recovery, sibling independence, GC and guest pressure. Preserve all
-correctness checks against fresh native outputs/action identities. Time actual
-builds separately from verification and disclose between-round verification's
-resident-memory effects. A ten-minute run is not ten minutes of idle residency.
+correctness checks against fresh native outputs/action identities. Separate
+intrusive verification from memory observations and disclose between-round
+verification's resident-memory effects. A ten-minute run is not ten minutes of
+idle residency.
 
 The extended protocol changes `bazel/envoy_library.bzl` to exercise broad Starlark
 invalidation and places two clones on different `poc_version.bzl` definitions
@@ -35,15 +51,14 @@ dependencies. Cold JVMs are context only. Use three independent seeds per arm
 for the production comparison, counterbalancing arm order across seeds. Report
 per-seed data and descriptive ranges; bootstrap confidence intervals over seeds
 are exploratory with only three seeds. Never treat within-seed samples as
-independent seeds. Report p95 within each seed without calling it a robust fleet
-tail estimate. Add seeds if uncertainty prevents a decision.
+independent seeds. Add seeds if uncertainty prevents a memory or sharing decision.
 
-The primary CPU/build and client p95 population uses the fixed named analysis
-rounds. Faster arms may execute more filler no-ops to reach 600 seconds; exclude
-those different filler populations from paired CPU/p95 comparisons. Report both
-the actual full lifetime and the covered first-600-second memory integral, including
-the first-sample delay. Verification and selected-library execution remain outside
-timed analysis windows and can affect residency between rounds.
+Require the same named useful-work phases and correctness checks in every arm.
+Additional filler no-ops may extend observation to 600 seconds; report their
+counts and do not substitute idle time or less completed work for memory savings.
+Report both the actual full lifetime and the covered first-600-second memory
+integral, including the first-sample delay. Verification and selected-library
+execution can affect residency between rounds and must remain visible.
 
 For 1/2/8-clone scaling, first perform one independent seed per arm as descriptive
 screening. Repeat where a scaling conclusion is needed. Keep the earlier
@@ -53,11 +68,12 @@ capacity; do not credit smaller post-OOM footprints as savings.
 
 Success requires zero semantic mismatches, proof that claimed offloaded arrays
 are gone, unchanged arena contents, at least 25% lower total resident host memory
-against unmodified warmed native, at most 5% extra CPU/build and 10% p95 latency
-regression, with savings surviving the declared lifetime/GC/pressure sequence.
+against unmodified warmed native, and physical sharing and savings surviving the
+declared useful-work/lifetime/GC/pressure sequence.
 These are acceptance targets, not predicted outcomes. Diagnostic completion or
-a documented failed gate does not make the experiment successful. No target has
-been relaxed.
+a documented failed gate does not make the experiment successful. The memory,
+correctness and lifecycle requirements remain in force; speed criteria have
+been removed by the user amendment above.
 
 ## Pins and environment
 
@@ -91,7 +107,8 @@ analysis-only preparation boundary.
 1. Inventory coverage and preserve existing receipts under their original pins.
 2. Analyze existing HPROFs to validate tooling, then collect matched native/off/
    heap/mapped diagnostic stages. Full-GC heap dumps, dominator analysis and
-   complete graph scans are diagnostic evidence, excluded from performance.
+   complete graph scans are diagnostic evidence, separate from unperturbed
+   memory comparisons.
 3. Measure retained sets, old-array retainers, committed/resident JVM memory,
    restore allocations and host sharing. Class histograms are shallow sizes;
    arena RSS is guest residency; neither proves durable host physical sharing.

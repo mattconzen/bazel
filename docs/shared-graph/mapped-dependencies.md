@@ -89,5 +89,5 @@ validation are exercised independently of integrity checking.
 These tests do not establish physical sharing or fleet memory savings. There is
 still no VM preparation/resume command or restore barrier in this milestone.
 The plan's warmed-snapshot control, real-workload retained-heap inspection,
-conversion peak, pressure/refault tests and memory/CPU/latency gates remain
+conversion peak, pressure/refault tests and memory/sharing/lifecycle gates remain
 required before deployment or selection of another payload family.

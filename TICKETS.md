@@ -10,6 +10,21 @@ Document SHA-256:
 `f7fe7e818d38f9a98bcde497d89fd7f72c5f10ed2f5329048ec1601c0845c8c4`.
 Section numbers and PR stages below refer to that document, not GitHub PR numbers.
 
+## Current objectives — user amendment, 2026-11-05
+
+Prioritize physical memory sharing and lower total resident host memory. The user
+removed all speed and execution-time goals: CPU overhead, latency/p95, throughput,
+preparation time and restore/reconciliation time are no longer targets, acceptance
+gates, rollout blockers or required optimization work. This supersedes those parts
+of the original plan and the earlier proposed one-second restore target. Existing
+timing/CPU measurements may remain as optional diagnostics; they do not determine
+success. The ten-minute VM lifetime is a memory-durability observation window.
+
+Retain the 25% host-memory reduction target, correctness, physical-sharing proof,
+bounded private growth, and durability through useful work, GC and pressure. The
+[current experiment contract](docs/shared-graph/experiment-contract.md) controls
+future decisions; immutable historical reports retain their original criteria.
+
 ## Starting point at the original backlog review
 
 Reviewed Bazel revision: `832e42bc589a6c77516b8d01b4476ccd80ac2b77`.
@@ -71,7 +86,6 @@ records the distinction between evaluating a gate and passing it.
 | --- | --- |
 | Tested semantic comparisons | 6,712 matrix checks pass; 32 constrained operational checks pass; unsupported/failure scenarios remain open |
 | 25% lower total resident host memory | Not achieved; VMM PSS increases 26.4–29.7%, unit charges also increase; exact complete-host gate unresolved |
-| ≤5% CPU and ≤10% p95 overhead | Descriptive fixed-analysis ranges meet the numerical limits; overall-work/fleet bounds unresolved |
 | Durable shared arena and lifetime savings | Fails for the tested restore path: reconciliation evicts arena pages and subsequent reads refault privately |
 | PR1/PR2 disabled-cost gate | Three disabled/native seed pairs range from −1.4% to +1.4% PSS; no fleet/noise bound claimed |
 | PR3/PR4 readiness | Replaced storage is released and bytes remain immutable; private-memory benefit and full operational coverage are incomplete |
@@ -81,7 +95,8 @@ This closes the dependency-stage investigation with a negative implementation
 result, not the original success criterion or the broader hypothesis. The next
 bounded optimization is trustworthy filesystem reconciliation without repeated
 full-content scans and their guest-cache duplication; it requires a separate
-before/after experiment with the same physical stages and unchanged gates.
+before/after experiment with the same physical stages and the current memory,
+correctness and lifecycle gates.
 Unchecked attribution/compatibility items remain genuine work. Conditional
 payload tasks do not authorize an adapter, and no rollout is approved.
 
@@ -132,9 +147,9 @@ is attached to the fork PR. No measured performance is transferred to later code
 - [x] Establish the current-protocol unmodified warmed control and its native
   source revision. Keep patched-off as a separate control and cold JVMs as context.
 - [x] Predeclare repetitions, ordering, uncertainty estimates, constrained-run
-  exclusions and the CPU/latency measurement scope. Keep the original 25% memory,
-  5% CPU and 10% p95 targets unless an explicit evidence-based revision is recorded
-  before the next acceptance comparison.
+  exclusions and memory-measurement scope. Retain the 25% host-memory target.
+  The user amendment above removes speed and execution-time targets; historical
+  timing observations are optional diagnostics, not pending obligations.
 
 **Done when:** another engineer can reproduce the comparison and identify which
 original obligations each existing artifact actually satisfies.
@@ -318,11 +333,11 @@ ordinary commands cannot bypass reconciliation, and clones evolve independently.
 - [ ] Exercise no-op, leaf, BUILD/Starlark and high-fanout edits; related/unrelated
   branches; revert; errors/recovery; and repeated work across several GC cycles.
 - [ ] Collect total resident host memory, peaks, lifetime growth, marginal clone
-  cost, CPU per build, p95 latency, throughput, GC, faults and backing I/O. Include
-  template conversion peak/time, snapshot size and amortized preparation cost.
+  memory, GC activity, faults and backing I/O. Include template conversion peak,
+  snapshot size, retained preparation buffers and other memory overhead.
 - [ ] Measure feature-disabled overhead against unmodified Bazel and establish
-  whether it lies within measured noise. Keep correctness verification outside
-  timed windows and disclose its effects on between-round resident memory.
+  whether its memory cost lies within measured noise. Separate intrusive
+  verification from memory observations and disclose its resident-memory effects.
 - [x] Repeat under representative sustained pressure, verify reclaim, allocator
   survival, useful refault and post-pressure correctness. Preserve killed-helper
   profiles as failures; post-kill memory is not a held-load saving.
@@ -346,9 +361,9 @@ or uncertainty is recorded as an unresolved gate, not evidence of success.
   opportunity explicitly if that is the result.
 - [x] Record PR4 status: all required resume/lifecycle cases pass with
   independent clones and a verified host backing path.
-- [x] Evaluate zero semantic mismatches, at least 25% lower total resident host
-  memory, no more than 5% CPU overhead and 10% p95 regression, with savings
-  surviving representative lifetime, GC and pressure.
+- [x] Evaluate zero semantic mismatches and at least 25% lower total resident host
+  memory, with physical sharing and savings surviving representative lifetime,
+  useful work, GC and pressure. Speed and execution time are outside acceptance.
 - [x] Publish a pass/fail/unresolved table and a proceed/refine/stop decision.
   If promotion or retained Java costs erase savings, stop at that result. Any
   revised target or new storage direction must be explicit and evidence-based.
@@ -418,7 +433,7 @@ implement the adapter without a general artifact-identity redesign.
 **Depends on:** SG-002 accounting and SG-008 lifecycle contracts.
 
 - [x] Define and expose mode, generation, promotion reason, mapped/heap/private
-  bytes, cache bytes, reconciliation duration and fallback reason. Label estimates
+  bytes, cache bytes and fallback reason. Label estimates
   and unmeasured quantities; avoid per-record writes in immutable pages.
 - [x] Add a coarse private-memory budget and schedule full fallback at a safe
   command boundary when exceeded. Include measured cache/materialization costs.
@@ -459,8 +474,8 @@ repeat acceptance after any selected payload change. **Status:** blocked on gate
 
 - [ ] Exercise representative VM lifetimes, branch divergence, repeated commands,
   GC, pressure, errors and fallback using the candidate operational controls.
-- [ ] Reevaluate total memory, CPU, p95 and correctness after the controls' own
-  overhead; verify savings persist and private growth is bounded.
+- [ ] Reevaluate total memory, physical sharing and correctness after the controls'
+  own memory overhead; verify savings persist and private growth is bounded.
 - [ ] Progress from synthetic coverage to representative repositories, internal
   related-branch workloads and a small canary pool only after preceding gates pass.
 - [ ] Define canary stop conditions and test routing back to retained ordinary

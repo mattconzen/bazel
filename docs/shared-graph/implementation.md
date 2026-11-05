@@ -58,7 +58,7 @@ backends can run the same contracts. The executor integration suite records
 factory calls through a weak reference and verifies factory reuse across reset
 without retaining discarded graphs.
 
-The implementation plan additionally requires physical memory, performance,
+The current experiment contract additionally requires physical memory/sharing,
 whole-VM restoration, and retained-heap evidence. Semantic test results do not
 establish those gates. This milestone has no frozen store, mapped arena,
 preparation/resume barrier, or payload offloading. Those require subsequent

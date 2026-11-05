@@ -4,6 +4,11 @@ All changes and pull requests belong to `github.com/mattconzen/bazel`. External
 components must be forked under `mattconzen` before changes are made. The source
 baseline is `fda97de2b3b179ecdfa8af455fffde8d0b6b6422`.
 
+The [2026-11-05 user amendment](experiment-contract.md#objective-amendment--2026-11-05)
+sets memory reduction and physical sharing as the objectives. All speed and
+execution-time goals are removed; timing and CPU data are optional diagnostics.
+Correctness, memory durability and lifecycle safety remain acceptance criteria.
+
 | Plan stage | Current result | Remaining acceptance work |
 | --- | --- | --- |
 | PR 0: measurement | Sixteen retained-heap stages, all 24 production/scaling cases, calibrated sizes/unknowns and reusable direct VMM treemaps | Complete-host reconciliation and fleet bounds |

@@ -233,8 +233,9 @@ with the same actor hash as its fresh native reference. Arena validation allocat
 86,720 bytes per clone (about 84.7 KiB), compared with 221.85 MiB on the preceding
 binary. It retained unchanged arena digests, ordinary action/archive equivalence
 and safe generation retirement. The differently pinned earlier protocol-transition
-probe is excluded from acceptance. Production CPU, latency and total-host memory
-remain separate pending gates.
+probe is excluded from acceptance. Total-host memory and physical-sharing
+acceptance remain separate. Under the [2026-11-05 user amendment](experiment-contract.md#objective-amendment--2026-11-05),
+CPU and latency are optional diagnostics, not pending gates.
 
 
 ## Preparation failure-path regression
@@ -290,7 +291,7 @@ physical sharing is not.
 [The acceptance decision](https://github.com/mattconzen/bazel-shared-graph-bench/tree/21b343bbb24bcf0e0c4adae35089b1f31f93968e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-04-plan-obligations/README.md#acceptance-decision)
 is to refine restoration, keep defaults off, defer payloads and block canary.
 VMM PSS is worse across all three production seed pairs. Full-host accounting,
-overall CPU/fleet p95 bounds, some external-refresh/fault-injection scenarios and
+some external-refresh/fault-injection scenarios and
 payload fanout/materialization rankings remain open. The broadened graph-sharing
 hypothesis is not disproved. The committed regression tool checks compatible
 single-cohort captures and attribution coverage, not fleet acceptance.
