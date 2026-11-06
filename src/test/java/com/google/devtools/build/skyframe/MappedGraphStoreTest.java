@@ -146,6 +146,57 @@ public final class MappedGraphStoreTest {
   }
 
   @Test
+  public void identicalRebindPreservesRetainedCursorsAndReleasesOldMapping() throws Exception {
+    var entry = complete();
+    var generation = graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    var store = (MappedGraphStore) graph.baselineStoreForTesting();
+    var reader = entry.getDoneDeps();
+    var group = reader.groups().iterator().next();
+    var reverse = entry.getReverseDepsForDoneEntry();
+    var key = reader.iterator().next();
+    var oldMapping = new WeakReference<>(store.mappingForTesting());
+    Path original = graph.backingFile();
+    Path replacement = Files.copy(original, directory().resolve("replacement.arena"));
+    byte[] bytes = Files.readAllBytes(replacement);
+    graph.rebindMappedBaseline(replacement);
+    GcFinalization.awaitClear(oldMapping);
+    assertThat(graph.baselineGeneration()).isEqualTo(generation);
+    assertThat(graph.backingFile()).isEqualTo(replacement);
+    assertThat(store.isReadOnlyForTesting()).isTrue();
+    assertThat(reader.iterator().next()).isSameInstanceAs(key);
+    assertThat(reader).containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c")).inOrder();
+    assertThat(group).containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c")).inOrder();
+    assertThat(reverse).hasSize(2);
+    assertThat(graph.materializedDependencyCount()).isEqualTo(0);
+    entry.markDirty(DirtyType.CHANGE);
+    assertThat(Files.readAllBytes(replacement)).isEqualTo(bytes);
+    graph.cleanupInterningPools();
+    assertThat(reader).containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c")).inOrder();
+    assertThrows(IOException.class, () -> store.rebind(replacement));
+  }
+
+  @Test
+  public void rebindRejectsDifferentValidArenaAndLeavesOriginalReadersUsable() throws Exception {
+    var entry = complete();
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    Path original = graph.backingFile();
+    byte[] bytes = Files.readAllBytes(original);
+    var buffer = ByteBuffer.wrap(bytes);
+    int direct = (int) buffer.getLong(MappedGraphStore.HEADER_BYTES + 16);
+    int first = buffer.getInt(direct + 12);
+    buffer.putInt(direct + 12, buffer.getInt(direct + 16));
+    buffer.putInt(direct + 16, first);
+    rewriteChecksum(bytes);
+    Path other = Files.write(directory().resolve("different.arena"), bytes);
+    assertThrows(IOException.class, () -> graph.rebindMappedBaseline(other));
+    assertThat(graph.backingFile()).isEqualTo(original);
+    graph.verifyBaseline();
+    assertThat(entry.getDoneDeps())
+        .containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c"))
+        .inOrder();
+  }
+
+  @Test
   public void failedConstructionLeavesMutableGraphUsable() throws Exception {
     var entry = complete();
     Path regularFile = Files.createTempFile(directory(), "not-a-directory", ".txt");

@@ -137,6 +137,128 @@ public final class SharedGraphLifecycleTest {
   }
 
   @Test
+  public void arenaRebindKeepsPreparedBarrierAndExactGeneration() throws Exception {
+    var target = new SharedGraphLifecycle("mapped", java.nio.file.Path::of);
+    target.noteCommandResult("build", true);
+    target.prepare(graph, temporaryFolder.newFolder().getAbsolutePath(), "0".repeat(40));
+    String generation = (String) target.status().get("generation");
+    var original = java.nio.file.Path.of((String) target.status().get("arena"));
+    var replacement = temporaryFolder.getRoot().toPath().resolve("rebound.arena");
+    java.nio.file.Files.copy(original, replacement);
+    assertThrows(
+        IllegalStateException.class,
+        () -> target.rebindArena(graph, replacement.toString(), "wrong"));
+    target.rebindArena(graph, replacement.toString(), generation);
+    assertThat(target.status().get("arena")).isEqualTo(replacement.toRealPath().toString());
+    assertThat(target.status().get("arena_rebound")).isEqualTo(true);
+    assertThat(target.status().get("preparation_complete")).isEqualTo(true);
+    assertThat(target.commandRejection("build")).contains("PREPARED");
+    assertThrows(
+        IllegalStateException.class,
+        () -> target.rebindArena(graph, replacement.toString(), generation));
+    target.beginReconciliation(generation);
+    assertThat(target.changedKeys()).isEmpty();
+    target.finishReconciliation(0);
+    assertThrows(
+        IllegalStateException.class,
+        () -> target.rebindArena(graph, replacement.toString(), generation));
+  }
+
+  @Test
+  public void corruptRebindCannotReopenAdmission() throws Exception {
+    var target = new SharedGraphLifecycle("mapped", java.nio.file.Path::of);
+    target.noteCommandResult("build", true);
+    target.prepare(graph, temporaryFolder.newFolder().getAbsolutePath(), "0".repeat(40));
+    String generation = (String) target.status().get("generation");
+    String original = (String) target.status().get("arena");
+    byte[] bytes = java.nio.file.Files.readAllBytes(java.nio.file.Path.of(original));
+    bytes[bytes.length - 1] ^= 1;
+    var replacement = temporaryFolder.getRoot().toPath().resolve("corrupt.arena");
+    java.nio.file.Files.write(replacement, bytes);
+    assertThrows(
+        java.io.IOException.class,
+        () -> target.rebindArena(graph, replacement.toString(), generation));
+    assertThat(target.status().get("arena")).isEqualTo(original);
+    assertThat(target.status().get("preparation_complete")).isEqualTo(false);
+    assertThat(target.commandRejection("build")).isNotNull();
+    assertThrows(IllegalStateException.class, () -> target.beginReconciliation(generation));
+  }
+
+  @Test
+  public void rebindNeedsReadonlyProofBeforeChangingPreparedState() throws Exception {
+    var target =
+        new SharedGraphLifecycle(
+            "mapped",
+            name -> {
+              throw new java.io.IOException("Writable filesystem");
+            });
+    target.noteCommandResult("build", true);
+    target.prepare(graph, temporaryFolder.newFolder().getAbsolutePath(), "0".repeat(40));
+    String generation = (String) target.status().get("generation");
+    var replacement = temporaryFolder.getRoot().toPath().resolve("ordinary.arena");
+    java.nio.file.Files.copy(
+        java.nio.file.Path.of((String) target.status().get("arena")), replacement);
+    assertThrows(
+        java.io.IOException.class,
+        () -> target.rebindArena(graph, replacement.toString(), generation));
+    assertThat(target.status().get("preparation_complete")).isEqualTo(true);
+    assertThat(target.status().get("arena_rebound")).isEqualTo(false);
+  }
+
+  @Test
+  public void postSwapRebindFailureRequiresDiscard() throws Exception {
+    var target = new SharedGraphLifecycle("mapped", java.nio.file.Path::of);
+    target.noteCommandResult("build", true);
+    target.prepare(graph, temporaryFolder.newFolder().getAbsolutePath(), "0".repeat(40));
+    String generation = (String) target.status().get("generation");
+    var replacement = temporaryFolder.getRoot().toPath().resolve("committed.arena");
+    java.nio.file.Files.copy(
+        java.nio.file.Path.of((String) target.status().get("arena")), replacement);
+    var failure = new OutOfMemoryError("synthetic post-swap failure");
+    assertThrows(
+        OutOfMemoryError.class,
+        () ->
+            target.rebindArena(
+                graph,
+                replacement.toString(),
+                generation,
+                () -> {
+                  throw failure;
+                }));
+    assertThat(target.status().get("arena_rebound")).isEqualTo(true);
+    assertThat(target.status().get("preparation_complete")).isEqualTo(false);
+    assertThat(target.commandRejection("build")).isNotNull();
+    assertThrows(IllegalStateException.class, () -> target.beginReconciliation(generation));
+    graph.verifyBaseline();
+  }
+
+  @Test
+  public void lostReboundFilesystemProofPreventsReconciliation() throws Exception {
+    boolean[] readonly = {true};
+    var target =
+        new SharedGraphLifecycle(
+            "mapped",
+            name -> {
+              if (!readonly[0]) {
+                throw new java.io.IOException("Lost rebound filesystem read-only proof");
+              }
+              return java.nio.file.Path.of(name);
+            });
+    target.noteCommandResult("build", true);
+    target.prepare(graph, temporaryFolder.newFolder().getAbsolutePath(), "0".repeat(40));
+    String generation = (String) target.status().get("generation");
+    var replacement = temporaryFolder.getRoot().toPath().resolve("lost-proof.arena");
+    java.nio.file.Files.copy(
+        java.nio.file.Path.of((String) target.status().get("arena")), replacement);
+    target.rebindArena(graph, replacement.toString(), generation);
+    readonly[0] = false;
+    target.beginReconciliation(generation);
+    assertThrows(java.io.IOException.class, target::verifyReboundArenaFilesystem);
+    assertThrows(java.io.IOException.class, target::changedKeys);
+    assertThat(target.commandRejection("build")).isNotNull();
+  }
+
+  @Test
   public void fingerprintsDetectContentWithIdenticalMetadata() throws Exception {
     var file = write("/work/input", "alpha");
     var key = track(file);

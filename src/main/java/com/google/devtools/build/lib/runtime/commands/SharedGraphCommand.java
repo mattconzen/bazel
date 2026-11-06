@@ -38,7 +38,7 @@ import java.util.List;
     buildPhase = NONE,
     allowResidue = true,
     options = {SharedGraphCommand.Options.class},
-    help = "Usage: %{product} shared_graph prepare|reconcile|status|discard\n%{options}",
+    help = "Usage: %{product} shared_graph prepare|rebind|reconcile|status|discard\n%{options}",
     shortDescription = "Coordinates experimental snapshot-coupled graph state.")
 public final class SharedGraphCommand implements BlazeCommand {
   @OptionsClass
@@ -100,13 +100,25 @@ public final class SharedGraphCommand implements BlazeCommand {
                 + " generation, with all input/output writers excluded. Never set for edited or"
                 + " unproven clones. Otherwise mutable content is fully revalidated.")
     public abstract boolean getVerifiedCleanClone();
+
+    @Option(
+        name = "shared_graph_rebind_arena",
+        defaultValue = "",
+        documentationCategory = OptionDocumentationCategory.UNDOCUMENTED,
+        effectTags = {OptionEffectTag.BAZEL_INTERNAL_CONFIGURATION},
+        help =
+            "Rebind only: absolute read-only filesystem file containing exactly this prepared"
+                + " generation's validated bytes. Requires command/writer exclusion; does not prove"
+                + " DAX or physical sharing.")
+    public abstract String getRebindArena();
   }
 
   @Override
   public BlazeCommandResult exec(CommandEnvironment env, OptionsParsingResult options) {
     try {
       if (options.getResidue().size() != 1) {
-        throw new IllegalArgumentException("Expected prepare, reconcile, status, or discard");
+        throw new IllegalArgumentException(
+            "Expected prepare, rebind, reconcile, status, or discard");
       }
       var settings = options.getOptions(Options.class);
       var executor = (SequencedSkyframeExecutor) env.getSkyframeExecutor();
@@ -119,7 +131,8 @@ public final class SharedGraphCommand implements BlazeCommand {
               env.getReporter(),
               settings.getVerifyRetention(),
               settings.getImmutableRoots(),
-              settings.getVerifiedCleanClone());
+              settings.getVerifiedCleanClone(),
+              settings.getRebindArena());
       env.getReporter()
           .getOutErr()
           .printOutLn(new com.google.gson.GsonBuilder().serializeNulls().create().toJson(status));

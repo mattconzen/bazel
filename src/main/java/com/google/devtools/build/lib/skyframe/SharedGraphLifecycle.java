@@ -65,6 +65,7 @@ final class SharedGraphLifecycle {
   private boolean preparationComplete;
   private boolean allowVerifiedCleanClone;
   private String reconciliationEvidence = "none";
+  private boolean arenaRebound;
   private boolean fallback;
   private UUID generation;
   private String file;
@@ -428,6 +429,7 @@ final class SharedGraphLifecycle {
     immutableFiles = ImmutableFiles.create(immutableRoots, readonlyPathVerifier);
     this.allowVerifiedCleanClone = allowVerifiedCleanClone;
     reconciliationEvidence = "none";
+    arenaRebound = false;
     // The controller must hold filesystem/workload exclusion continuously from that build through
     // snapshot publication. Re-read fingerprints to reject a filesystem changing during capture.
     phaseMetrics.clear();
@@ -648,6 +650,55 @@ final class SharedGraphLifecycle {
     return digest.digest();
   }
 
+  void rebindArena(InMemoryGraph graph, String target, String expectedGeneration)
+      throws IOException, InterruptedException {
+    rebindArena(graph, target, expectedGeneration, () -> {});
+  }
+
+  @VisibleForTesting
+  void rebindArena(
+      InMemoryGraph graph, String target, String expectedGeneration, Runnable afterSwap)
+      throws IOException, InterruptedException {
+    checkState(
+        state == State.PREPARED && preparationComplete && generation != null,
+        "Arena rebind requires a complete prepared generation");
+    checkState(
+        "mapped".equals(mode) && graph instanceof LayeredInMemoryGraph,
+        "Arena rebind requires the mapped backend");
+    checkState(generation.toString().equals(expectedGeneration), "Generation mismatch");
+    checkState(!arenaRebound, "Arena backing was already rebound");
+    var requested = java.nio.file.Path.of(target);
+    if (!requested.isAbsolute() || !requested.normalize().equals(requested)) {
+      throw new IllegalArgumentException("Rebind arena must be a normalized absolute file path");
+    }
+    readonlyPathVerifier.refresh();
+    var canonical = readonlyPathVerifier.verify(target);
+    if (!java.nio.file.Files.isRegularFile(canonical, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+      throw new IOException("Rebind arena is not a regular file");
+    }
+    String canonicalName = canonical.toString();
+    var layered = (LayeredInMemoryGraph) graph;
+    // Any failure after this boundary requires discard. In particular, a
+    // post-swap GC/prefault/metrics failure cannot reopen ordinary admission.
+    preparationComplete = false;
+    failure = "Arena rebind did not finish; discard this generation";
+    try (var phase = phase("rebind_arena")) {
+      layered.rebindMappedBaseline(canonical);
+      file = canonicalName;
+      arenaRebound = true;
+      afterSwap.run();
+    }
+    try (var phase = phase("rebind_gc")) {
+      System.gc();
+    }
+    try (var phase = phase("rebind_prefault")) {
+      layered.prefaultBaseline();
+    }
+    checkInterrupted();
+    preparationComplete = true;
+    failure = null;
+  }
+
   void beginReconciliation(String expectedGeneration) {
     checkState(
         state == State.PREPARED && generation != null,
@@ -658,10 +709,23 @@ final class SharedGraphLifecycle {
     reconciliationNanos = System.nanoTime();
   }
 
+  void verifyReboundArenaFilesystem() throws IOException {
+    if (!arenaRebound) {
+      return;
+    }
+    readonlyPathVerifier.refresh();
+    var canonical = readonlyPathVerifier.verify(file);
+    if (!canonical.toString().equals(file)
+        || !java.nio.file.Files.isRegularFile(canonical, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+      throw new IOException("Rebound arena filesystem identity changed");
+    }
+  }
+
   ImmutableSet<SkyKey> changedKeys() throws IOException, InterruptedException {
     reconciliationEvidence = "full-mutable-content-and-immutable-root-proof";
     var context = new FingerprintContext(immutableFiles);
     try {
+      verifyReboundArenaFilesystem();
       immutableFiles.verifyRoots();
       return changedKeys(context);
     } finally {
@@ -679,6 +743,7 @@ final class SharedGraphLifecycle {
     // whole-filesystem clone paired with this prepared JVM, exclude input and
     // output writers until reconciliation, and withhold the assertion otherwise.
     // Without that assertion the ordinary full-content path remains mandatory.
+    verifyReboundArenaFilesystem();
     immutableFiles.verifyRoots();
     checkInterrupted();
     reconciliationEvidence = "controller-verified-unchanged-filesystem-clone";
@@ -747,6 +812,7 @@ final class SharedGraphLifecycle {
     preparationComplete = false;
     allowVerifiedCleanClone = false;
     reconciliationEvidence = "none";
+    arenaRebound = false;
     file = null;
     observations = ImmutableList.of();
     mappedBytes = 0;
@@ -768,6 +834,7 @@ final class SharedGraphLifecycle {
     status.put("preparation_complete", preparationComplete);
     status.put("allow_controller_verified_clean_clone", allowVerifiedCleanClone);
     status.put("reconciliation_change_evidence", reconciliationEvidence);
+    status.put("arena_rebound", arenaRebound);
     status.put("generation", generation == null ? null : generation.toString());
     status.put("arena", file);
     status.put("mapped_bytes", mappedBytes);

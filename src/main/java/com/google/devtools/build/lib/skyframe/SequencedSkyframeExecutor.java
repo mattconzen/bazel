@@ -309,6 +309,29 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       java.util.List<String> immutableRoots,
       boolean verifiedCleanClone)
       throws java.io.IOException, InterruptedException {
+    return sharedGraphOperation(
+        operation,
+        directory,
+        revision,
+        generation,
+        eventHandler,
+        verifyRetention,
+        immutableRoots,
+        verifiedCleanClone,
+        "");
+  }
+
+  public java.util.Map<String, Object> sharedGraphOperation(
+      String operation,
+      String directory,
+      String revision,
+      String generation,
+      ExtendedEventHandler eventHandler,
+      boolean verifyRetention,
+      java.util.List<String> immutableRoots,
+      boolean verifiedCleanClone,
+      String rebindArena)
+      throws java.io.IOException, InterruptedException {
     switch (operation) {
       case "prepare" -> {
         if (!trackIncrementalState) {
@@ -327,6 +350,9 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
         try {
           try (var phase = sharedGraphLifecycle.phase("reconcile_watcher_reset")) {
             resetFilesystemWatching();
+          }
+          try (var phase = sharedGraphLifecycle.phase("reconcile_rebound_filesystem")) {
+            sharedGraphLifecycle.verifyReboundArenaFilesystem();
           }
           if (memoizingEvaluator.getInMemoryGraph()
               instanceof com.google.devtools.build.skyframe.LayeredInMemoryGraph layered) {
@@ -364,6 +390,9 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
           throw failure;
         }
       }
+      case "rebind" ->
+          sharedGraphLifecycle.rebindArena(
+              memoizingEvaluator.getInMemoryGraph(), rebindArena, generation);
       case "discard" -> {
         graphFactory = InMemoryGraphFactory.DEFAULT;
         resetEvaluator();
@@ -371,7 +400,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       }
       case "status" -> {}
       default ->
-          throw new IllegalArgumentException("Expected prepare, reconcile, status, or discard");
+          throw new IllegalArgumentException(
+              "Expected prepare, rebind, reconcile, status, or discard");
     }
     var status = sharedGraphLifecycle.status();
     if (memoizingEvaluator.getInMemoryGraph()

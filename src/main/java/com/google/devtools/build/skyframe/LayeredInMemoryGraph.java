@@ -249,6 +249,12 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
     }
   }
 
+  /** Caller must hold PREPARED command exclusion and a read-only filesystem proof. */
+  public void rebindMappedBaseline(Path file) throws IOException {
+    checkState(baseline instanceof MappedGraphStore, "Mapped baseline required for arena rebind");
+    ((MappedGraphStore) baseline).rebind(file);
+  }
+
   public long mappedBytes() {
     var store = baseline;
     return store == null ? 0 : store.mappedBytes();
