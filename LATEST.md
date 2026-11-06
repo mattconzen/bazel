@@ -241,7 +241,13 @@ and fresh portable raw replay pass. The
 records its whole-diagnostic owned peak of 19,894,378,496 bytes, including retained
 checkpoints/backing and intrusive verification. That peak is not a lifetime mean
 or a whole-VM saving. Supporting-memory accounting remains open. The 3 GiB
-candidate-policy lifecycle run is now active. The older 425-check mechanism replay still
+candidate-policy lifecycle run is now active, but a
+[source-coverage review](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5ff63bf/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/lifecycle-source-coverage)
+found its newly imported OOM helper missing from the 336-file manifest. It is
+limited evidence and receives no new-runtime lifecycle qualification. The strict
+auditor rejects the omission. Static dependency capture is prepared; integrate
+it into the frozen lifecycle collector after this run exits, then repeat the
+qualification with a complete source closure. The older 425-check mechanism replay still
 passes but explicitly reports no guest OOM-counter coverage; it is not upgraded.
 The treemap policy collector now supports explicit 2/3 GiB geometry and exact
 legacy replay; live 3 GiB ownership capture remains required.
