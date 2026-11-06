@@ -282,9 +282,14 @@ declared scopes. Ownership replay is complete with its failing uncertainty guard
 preserved. The accounting observer is now integrated and
 [plan 02](https://github.com/mattconzen/bazel-shared-graph-bench/tree/9caeeaa/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02)
 freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
-collection. The sequential independent matrix is running; its first four-VM
-native case has started with both accounting sources captured. No case has yet
-completed. No idle padding or unequal per-arm work is permitted.
+collection. The sequential independent matrix is running. Its first four-VM
+native case completes 1,087 operations over 821.126545698 useful seconds, with
+source/work/JVM/guest-OOM/baseline and ordered-accounting replay passing. The
+[first native checkpoint](https://github.com/mattconzen/bazel-shared-graph-bench/tree/cff6e2c/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
+reports mean owned charge 12,274,525,568 bytes over the first 600 seconds. Guest/
+host OOM, limit events and swap are zero. This is one native seed, not a paired
+memory-saving or statistical decision. The patched-off cohort is active; 23
+cohorts remain. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
