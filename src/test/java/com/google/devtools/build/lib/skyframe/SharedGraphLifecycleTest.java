@@ -299,6 +299,48 @@ public final class SharedGraphLifecycleTest {
   }
 
   @Test
+  public void readonlyLinuxMountProofUsesPerMountFlagsAndNestedViews() throws Exception {
+    String mounts =
+        "24 1 8:1 / / rw,relatime - ext4 /dev/vda rw\n"
+            + "25 24 8:1 /tools /immutable ro,relatime - ext4 /dev/vda rw\n"
+            + "26 25 8:1 /writable /immutable/nested rw,relatime - ext4 /dev/vda rw\n"
+            + "27 24 8:1 /space /tool\\040cache ro,relatime - ext4 /dev/vda rw\n";
+    assertThat(
+            SharedGraphLifecycle.readonlyLinuxMount(
+                java.nio.file.Path.of("/immutable/tool"), mounts))
+        .isTrue();
+    assertThat(
+            SharedGraphLifecycle.readonlyLinuxMount(
+                java.nio.file.Path.of("/immutable/nested/file"), mounts))
+        .isFalse();
+    assertThat(
+            SharedGraphLifecycle.readonlyLinuxMount(
+                java.nio.file.Path.of("/immutable-other/file"), mounts))
+        .isFalse();
+    assertThat(
+            SharedGraphLifecycle.readonlyLinuxMount(
+                java.nio.file.Path.of("/tool cache/file"), mounts))
+        .isTrue();
+    String overmounted = mounts + "28 24 8:1 /other /immutable rw,relatime - ext4 /dev/vda rw\n";
+    assertThat(
+            SharedGraphLifecycle.readonlyLinuxMount(
+                java.nio.file.Path.of("/immutable/tool"), overmounted))
+        .isFalse();
+  }
+
+  @Test
+  public void malformedOrMissingMountProofCannotDeclareAnImmutableFile() throws Exception {
+    assertThat(
+            SharedGraphLifecycle.readonlyLinuxMount(java.nio.file.Path.of("/immutable/tool"), ""))
+        .isFalse();
+    assertThrows(
+        java.io.IOException.class,
+        () ->
+            SharedGraphLifecycle.readonlyLinuxMount(
+                java.nio.file.Path.of("/immutable/tool"), "truncated\n"));
+  }
+
+  @Test
   public void constructionFailureReopensAdmissionWithoutCommittedBaseline() throws Exception {
     track(write("/work/file", "x"));
     var target = new SharedGraphLifecycle("mapped");

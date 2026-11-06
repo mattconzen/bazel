@@ -79,14 +79,100 @@ final class SharedGraphLifecycle {
   @VisibleForTesting
   interface ReadonlyPathVerifier {
     java.nio.file.Path verify(String path) throws IOException;
+
+    default void refresh() throws IOException {}
   }
 
   private record ImmutableRoot(java.nio.file.Path declared, java.nio.file.Path canonical) {}
+
+  private record LinuxMount(java.nio.file.Path path, boolean readOnly) {}
+
+  /** FileStore's device-based mount lookup misses read-only bind views on a writable device. */
+  private static final class NativeReadonlyPathVerifier implements ReadonlyPathVerifier {
+    private ImmutableList<LinuxMount> mounts;
+
+    @Override
+    public void refresh() throws IOException {
+      var mountinfo = java.nio.file.Path.of("/proc/self/mountinfo");
+      mounts =
+          java.nio.file.Files.exists(mountinfo)
+              ? parseLinuxMounts(java.nio.file.Files.readString(mountinfo))
+              : null;
+    }
+
+    @Override
+    public java.nio.file.Path verify(String name) throws IOException {
+      var canonical = java.nio.file.Path.of(name).toRealPath();
+      boolean readOnly =
+          mounts == null
+              ? java.nio.file.Files.getFileStore(canonical).isReadOnly()
+              : readonlyLinuxMount(canonical, mounts);
+      if (!readOnly) {
+        throw new IOException("Immutable input requires a read-only filesystem: " + name);
+      }
+      return canonical;
+    }
+  }
+
+  private static ImmutableList<LinuxMount> parseLinuxMounts(String text) throws IOException {
+    var mounts = ImmutableList.<LinuxMount>builder();
+    for (String line : text.lines().toList()) {
+      var fields = line.split(" +");
+      int separator = Arrays.asList(fields).indexOf("-");
+      if (fields.length < 10 || separator < 6 || separator + 3 >= fields.length) {
+        throw new IOException("Malformed Linux mountinfo; immutable proof unavailable");
+      }
+      String decoded =
+          fields[4]
+              .replace("\\040", " ")
+              .replace("\\011", "\t")
+              .replace("\\012", "\n")
+              .replace("\\134", "\\");
+      var path = java.nio.file.Path.of(decoded);
+      var options = Arrays.asList(fields[5].split(","));
+      if (!path.isAbsolute()
+          || !path.normalize().equals(path)
+          || !(options.contains("ro") || options.contains("rw"))) {
+        throw new IOException("Invalid Linux mount identity/options");
+      }
+      mounts.add(new LinuxMount(path, options.contains("ro") && !options.contains("rw")));
+    }
+    return mounts.build();
+  }
+
+  private static boolean readonlyLinuxMount(
+      java.nio.file.Path canonical, ImmutableList<LinuxMount> mounts) {
+    int longest = -1;
+    int matches = 0;
+    boolean readOnly = false;
+    for (var mount : mounts) {
+      if (canonical.startsWith(mount.path())) {
+        int depth = mount.path().getNameCount();
+        if (depth > longest) {
+          longest = depth;
+          matches = 1;
+          readOnly = mount.readOnly();
+        } else if (depth == longest) {
+          matches++;
+        }
+      }
+    }
+    return longest >= 0 && matches == 1 && readOnly;
+  }
+
+  @VisibleForTesting
+  static boolean readonlyLinuxMount(java.nio.file.Path canonical, String mountinfo)
+      throws IOException {
+    return readonlyLinuxMount(canonical, parseLinuxMounts(mountinfo));
+  }
 
   /** The controller also guarantees that the immutable backing generation cannot be replaced. */
   private record ImmutableFiles(ImmutableList<ImmutableRoot> roots, ReadonlyPathVerifier verifier) {
     static ImmutableFiles create(List<String> paths, ReadonlyPathVerifier verifier)
         throws IOException {
+      if (!paths.isEmpty()) {
+        verifier.refresh();
+      }
       var roots = ImmutableList.<ImmutableRoot>builder();
       for (String name : paths) {
         var declared = java.nio.file.Path.of(name);
@@ -102,6 +188,11 @@ final class SharedGraphLifecycle {
     }
 
     void verifyRoots() throws IOException {
+      if (!roots.isEmpty()) {
+        // One mount snapshot per excluded pass, rather than retained per-file mount-table copies.
+        // The controller excludes mount/image changes while a verification pass is in progress.
+        verifier.refresh();
+      }
       for (var root : roots) {
         if (!verifier.verify(root.declared().toString()).equals(root.canonical())) {
           throw new IOException("Immutable root changed canonical identity: " + root.declared());
@@ -126,14 +217,6 @@ final class SharedGraphLifecycle {
     }
   }
 
-  private static java.nio.file.Path readonlyCanonicalPath(String name) throws IOException {
-    var canonical = java.nio.file.Path.of(name).toRealPath();
-    if (!java.nio.file.Files.getFileStore(canonical).isReadOnly()) {
-      throw new IOException("Immutable input requires a read-only filesystem: " + name);
-    }
-    return canonical;
-  }
-
   /** One scratch buffer per excluded verification pass, including recursive output trees. */
   private static final class FingerprintContext {
     private final ImmutableFiles immutableFiles;
@@ -143,7 +226,7 @@ final class SharedGraphLifecycle {
     private long immutableFilesSkipped;
 
     FingerprintContext() {
-      this(new ImmutableFiles(ImmutableList.of(), SharedGraphLifecycle::readonlyCanonicalPath));
+      this(new ImmutableFiles(ImmutableList.of(), new NativeReadonlyPathVerifier()));
     }
 
     FingerprintContext(ImmutableFiles immutableFiles) {
@@ -227,7 +310,7 @@ final class SharedGraphLifecycle {
   }
 
   SharedGraphLifecycle(String mode) {
-    this(mode, SharedGraphLifecycle::readonlyCanonicalPath);
+    this(mode, new NativeReadonlyPathVerifier());
   }
 
   @VisibleForTesting

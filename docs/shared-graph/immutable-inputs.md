@@ -18,6 +18,13 @@ root's canonical path and read-only filesystem during both preparation captures
 and reconciliation. A lost root proof fails preparation or leaves restoration
 blocked. Ordinary command admission is unchanged.
 
+On Linux, verification uses the longest matching mount in the kernel's
+`/proc/self/mountinfo`, including per-mount read-only flags. It reads one mount
+snapshot per excluded pass. Missing, malformed or ambiguous proof is rejected.
+The JDK's device-based FileStore lookup can identify the writable parent instead
+of a read-only bind view; the first live preflight exposed that behavior and was
+rejected before freeze. Other providers retain their FileStore read-only check.
+
 For regular files under a declared root, canonical resolution and read-only
 filesystem verification determine whether contents can be skipped. Aliases
 between declared immutable roots are supported. Escaping symlinks, nested
