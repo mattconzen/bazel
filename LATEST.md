@@ -285,7 +285,7 @@ freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
 collection. The sequential independent matrix is running. Its first four-VM
 native case completes 1,087 operations over 821.126545698 useful seconds, with
 source/work/JVM/guest-OOM/baseline and ordered-accounting replay passing. The
-[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/f4aa2bd/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
+[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/a7167f4/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
 reports mean owned charge 12,274,525,568 bytes over the first 600 seconds. Guest/
 host OOM, limit events and swap are zero. This is one native seed, not a paired
 memory-saving or statistical decision. The patched-off cohort also completes
@@ -309,10 +309,16 @@ the first eight-VM native case also completes 1,087 operations over
 17,503,137,857 bytes, with source/work/JVM/guest-OOM/baseline and ordered-
 accounting replay passing. Recorded owned-cgroup OOM/limit events and swap are
 zero; minimum host MemAvailable at operation boundaries is 10,961,084,416 bytes.
-Five of 24 cohorts have finished and eight-VM patched-off is active. These are
-different arms/counts of one block, not independent replicates of one treatment.
-Remaining blocks and complete-host bounds are required for the final decision.
-No idle padding or unequal per-arm work is permitted.
+Eight-VM patched-off also completes 1,087 operations over 1,001.764785501 useful
+seconds, with the same replay, safety and baseline checks passing. Its first-
+600-second mean owned charge is 19,123,034,270 bytes and minimum recorded host
+MemAvailable at operation boundaries is 10,807,611,392 bytes. Its JVM argv records
+the off mode; this larger single-template point does not establish a causal or
+statistical memory regression. Six of 24 cohorts have finished and eight-VM
+mapped is active. These are different arms/counts of one block, not independent
+replicates of one treatment. Remaining blocks and complete-host bounds are
+required for the final decision. No idle padding or unequal per-arm work is
+permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
