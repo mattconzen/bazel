@@ -166,6 +166,25 @@ rejected forged-receipt controls. New opt-in ownership diagnostics support split
 RAM and export PNG treemaps; new runs also verify complete baseline asset hashes
 after all readers close, outside useful measurement. Those tool additions do not
 upgrade the older measurements. All final memory gates remain open.
+Matched four-VM policy ownership diagnostics now pass their full useful trace,
+post-shutdown baseline hashes and portable physical replay. Final cohort VMM PSS
+is 3,497,595,904 native versus 3,617,953,792 mapped: 120,357,888 bytes higher for
+mapped, including approximately 110,317,227 extra private Java-heap bytes. Native
+and mapped retain substantial private JVM native pages, file cache, slab and
+allocator-free guest pages; the encoded arena is not a ceiling on this wider
+opportunity. Probe effects are substantial and owner uncertainty remains about
+9.5% native / 8.9% mapped, so the default 5% ownership regression guard correctly
+fails. These snapshots do not qualify unperturbed lifetime savings. The
+[ownership bundle and PNGs](https://github.com/mattconzen/bazel-shared-graph-bench/tree/88f2df9/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-memory-attribution)
+retain raw evidence, 18 PNGs, native/mapped comparison tooling, portable replay,
+17/21 rejected altered receipts and explicit failed-render/supervisor records.
+Full lifecycle backing images also pass an independent rehash after all readers
+exit. Eight-VM capacity screening is underway; native completes the short trace
+with mean owned charge 12,011,073,669 bytes, peak 14,260,097,024 and minimum host
+MemAvailable 17,178,714,112. Independent comparison seeds remain pending. The
+proposed fixed trace is undergoing a separate observation-coverage preflight
+before its final operation count is frozen; cached actions can shorten later
+epochs. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
@@ -237,9 +256,11 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [ ] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
-- [ ] Build and pin the corrected binary/image, run affected semantic/integrity
-  suites, and collect matched before/after memory attribution at the existing
-  physical stages. Keep diagnostic captures separate from lifetime comparisons.
+- [x] Build and pin the corrected binary/image, run affected semantic/integrity
+  suites, and collect matched before/after memory attribution at the declared
+  physical stages. Current policy diagnostics cover before/after reconciliation,
+  held pressure and post-useful work; full action observers follow those captures.
+  Keep diagnostic captures separate from lifetime comparisons.
 
 ### Completion criteria
 
