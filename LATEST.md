@@ -279,9 +279,12 @@ unchanged. All thirty-two guest observations in the new 3 GiB diagnostic now
 contain schema-2 inputs and pass strict physical replay. Current-runtime
 capacity, useful coverage, sharing and lifecycle diagnostics have passed their
 declared scopes. Ownership replay is complete with its failing uncertainty guard
-preserved. Accounting-observer integration and final plan/source pins remain
-required before independent collection. No independent
-seed has launched. No idle padding or unequal per-arm work is permitted.
+preserved. The accounting observer is now integrated and
+[plan 02](https://github.com/mattconzen/bazel-shared-graph-bench/tree/9caeeaa/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02)
+freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
+collection. The sequential independent matrix is running; its first four-VM
+native case has started with both accounting sources captured. No case has yet
+completed. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
@@ -319,15 +322,19 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   justified error/interval model; no numerical bound or full-binary attestation
   is claimed, and the existing unknown fields remain null.
   The separate [ordered-input recorder smoke](https://github.com/mattconzen/bazel-shared-graph-bench/tree/9c316da/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-accounting-input-smoke)
-  now preserves timed global/owned/root/zone counter reads in bounded compressed
-  memfds. Five tests and a 21-sample real-host capture/replay pass. It is not
-  integrated into lifetime comparisons and certifies no accounting error bound.
+  preserves timed global/owned/root/zone counter reads in bounded compressed
+  memfds. Its five tests and 21-sample real-host capture/replay passed before
+  lifetime integration; it certified no accounting error bound.
   A separate [original-sampler adapter and smoke](https://github.com/mattconzen/bazel-shared-graph-bench/tree/a74a399/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/lifetime-accounting-adapter-smoke)
   now passes eleven focused tests under both Python runtimes and a 22-sample
   real-host capture/replay. It combines both observers on the original sampling
-  thread and exports ordered inputs after sampling stops. It is not yet wired
-  into the trial runner/auditor; source pinning and numerical error qualification
-  remain required before these inputs can support a complete-host claim.
+  thread and exports ordered inputs after sampling stops. The subsequent
+  [runner/auditor integration](https://github.com/mattconzen/bazel-shared-graph-bench/tree/f63465c/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/integrated-lifetime-accounting)
+  passes thirty focused tests, a final real 22-sample acquisition and nine
+  altered-input controls. Replay binds the original window rows/clock, source,
+  kernel, page size and cgroup. Both older ownership captures still replay with
+  ordered-input coverage explicitly false. Numerical error qualification remains
+  open; integrated raw counter acquisition is not a complete-host certificate.
 - [x] Keep unmodified warmed native as the primary control and patched-off as
   the implementation control. Add a separate native memory-saving control using
   applicable stock cache-discard options. Record exact options and verify its
@@ -335,13 +342,14 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [ ] Rank opportunities by attributable private resident bytes, semantic reuse,
   GC/write behavior and expected replacement overhead. Include opportunities
   outside the current mapped dependency vectors.
-- [ ] Pin source/binary/image identities, toolchains, observed JVM/GC settings,
+- [x] Pin source/binary/image identities, toolchains, observed JVM/GC settings,
   execution/cache policy, input states, resources, useful work and memory
-  checkpoints. Predeclare the primary comparison and decision rule. The committed
-  plan 01 and lifetime protocol pin the primary 600-second interval, raw replay,
-  paired seed arithmetic and unknown complete-host bounds. Plan 01 was never
-  run and is superseded after failed guest-pressure admission. Reopen these pins
-  for the matched 3 GiB runtime; prior diagnostics keep their original identities.
+  checkpoints. Predeclare the primary comparison and decision rule. Immutable
+  plan 02 pins image 05, catalog 07, 356 collector/analysis sources, the matched
+  3 GiB runtime, primary 600-second interval, fixed useful trace and paired seed
+  arithmetic. Missing complete-host bounds remain explicit. Plan 01 was never
+  run and remains unchanged after failed guest-pressure admission. Prior
+  diagnostics keep their original identities; new trial acceptance is pending.
 
 ### Completion criteria
 
