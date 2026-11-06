@@ -193,10 +193,14 @@ bounds. Independent comparison seeds remain pending. Two complete epochs of the
 separate four-epoch coverage pilot take 839.738615535 useful seconds. The
 [committed predeclared plan](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d080b7c/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials)
 pins that 1,087-operation trace, three independent blocks per arm/count, four
-arms, four/eight VMs, analysis tools and 512 MiB held pressure per guest. Trial
-admission still requires the pilot's final integrity checks and a fresh eight-VM
-native capacity check at 512 MiB. No independent seed has launched. No idle
-padding or unequal per-arm work is permitted.
+arms, four/eight VMs, analysis tools and 512 MiB held pressure per guest. The
+[coverage pilot](https://github.com/mattconzen/bazel-shared-graph-bench/tree/af098ed/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/useful-coverage-pilot)
+now completes all 2,169 operations over 1,640.751236496 useful seconds, final
+baseline hashes and portable raw replay. Its fifteen altered-receipt controls
+pass. It retains its screening flag and 128 MiB pressure scope. Trial admission
+still requires the fresh eight-VM native capacity check at 512 MiB, currently
+running. No independent seed has launched. No idle padding or unequal per-arm
+work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
