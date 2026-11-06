@@ -285,6 +285,11 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   processes, kernel memory and file/buffer cache at matching checkpoints.
 - [ ] Reconcile the complete host-memory ledger, including baseline backing and
   support memory outside VMM mappings. Quantify accounting error and unknowns.
+  The [host accounting source audit](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5adb0d3/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-accounting-source-audit)
+  pins seven unmodified vendor blobs and four byte-identical installed headers.
+  Conditional rstat flushing and cross-CPU event aggregation still require a
+  justified error/interval model; no numerical bound or full-binary attestation
+  is claimed, and the existing unknown fields remain null.
 - [x] Keep unmodified warmed native as the primary control and patched-off as
   the implementation control. Add a separate native memory-saving control using
   applicable stock cache-discard options. Record exact options and verify its
