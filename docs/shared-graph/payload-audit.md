@@ -101,6 +101,40 @@ decision does not treat the current encoded arena size as a ceiling on possible
 whole-VM improvements. It also does not infer GB of offloadable graph objects
 from GB of total resident memory.
 
+## Physical owner checkpoint after the selected policies
+
+Matched four-VM ownership diagnostics, using guest reporting, heap release and
+owned backing advice in both arms, now identify substantial remaining private
+residency. These are post-useful diagnostic snapshots with large probe effects,
+not the natural lifetime means or a retained-object model.
+
+| Physical owner | Native private bytes, four VMs | Mapped private bytes, four VMs | Reclaim/offload question |
+| --- | ---: | ---: | --- |
+| Java heap mappings | 665,412,949 | 775,730,176 | Which live identities, collector pages and temporary/caller-held objects can actually be replaced or released? |
+| Other JVM anonymous mappings | 707,762,859 | 672,133,120 | Distinguish live native allocations, allocator retention, stacks and collector structures before changing native-heap policy. |
+| Guest file cache outside userspace mappings | 514,359,296 | 513,609,728 | Separate useful source/output cache from disposable repeated cache, including refault and supporting costs. |
+| Guest allocator free pages | 498,667,520 | 554,446,848 | Determine which private free pages remain resident despite reporting; free guest bytes alone are not a physical saving. |
+| Guest slab | 365,211,648 | 366,669,824 | Attribute objects and required kernel working set before introducing a cache policy. |
+| Other/unattributed RAM | 311,099,392 | 293,642,240 | Improve attribution; do not treat unknown pages as reclaimable or absent. |
+
+These sets rank the remaining measured private footprints, with actual
+recoverable fractions still unknown; zero-to-owner-size is only an opportunity
+envelope. They are a subset of VMM PSS, not additional costs to add to PSS or
+cgroup charges. Supporting host memory remains outside this owner table. Native
+and mapped cohort PSS are 3,497,595,904 and 3,617,953,792 bytes. The final probes
+change PSS by approximately -216 MB and -233 MB respectively, making causal
+claims from these snapshots inappropriate. Unknown ownership remains above the
+default 5% regression guard, which correctly fails.
+
+The [committed raw captures, comparison and PNGs](https://github.com/mattconzen/bazel-shared-graph-bench/tree/88f2df9/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-memory-attribution)
+permit replay. The [restore retention audit](restore-retention-audit.md) separately
+estimates approximately 15 MB/VM of possible eager-view/record shallow overhead;
+it does not establish a resident benefit or select a new adapter. Existing
+configured-target/package retained models remain logical opportunities requiring
+their own equality, identity, mutation and lifetime design. Current evidence
+supports completing the fixed-work independent comparison and improving these
+larger owner measurements before adding another payload family.
+
 ## Stock cache-discard controls
 
 The warmed control uses `--noallow_analysis_cache_discard`. Separate native
