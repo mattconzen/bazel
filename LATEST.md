@@ -1,6 +1,6 @@
 # Memory sharing and reduction: current roadmap
 
-Updated 2026-11-05. Task-level acceptance remains open; completed implementation
+Updated 2026-11-06. Task-level acceptance remains open; completed implementation
 subtasks are checked below.
 
 Reduce total resident host memory across related Bazel microVM builds while
@@ -77,19 +77,34 @@ higher. These are single-seed intrusive diagnostics, not a reconciled total-host
 lifetime result. L-02 parity remains open. Source `25c5664fcb` adds exact arena
 rebinding and a generation-checked intrusive full-access diagnostic; all four
 affected Java suites pass and its binary/image are pinned. Live Bazel DAX
-qualification is in progress; earlier VM results remain pinned to their actual
-older binary.
+mechanism qualification now passes 425 checks and 14 captures in two real Bazel
+VMs; earlier results remain pinned to their actual older binary.
 
 A separate stock-Firecracker PMEM snapshot byte pilot passes 56 checks and 14
 captures, with 4 MiB shared selected residency versus 8 MiB for independent
-backing in two VMs. Its committed metadata replays. It covers held guest pressure
-and guest mapping/refault; Bazel integration, JVM GC and host backing-cache
-eviction/refault remain open. The GB-scale full-native Envoy executable and repeat
+backing in two VMs. Its committed metadata replays. The subsequent
+[actual Bazel/JVM fixture](https://github.com/mattconzen/bazel-shared-graph-bench/tree/de420d8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/bazel-pmem-evidence)
+demonstrates 31,363,072 rounded resident arena bytes shared by two VMs versus
+62,726,144 with independent backing, through branch divergence, JVM GC, held
+pressure, guest refault, actual host backing eviction/refault and revert. Full
+retained-image and portable metadata replay pass. This is an intrusive complete
+access test, not unperturbed lifetime qualification or complete-host savings.
+Failed and source-closure-limited attempts remain preserved. The GB-scale
+full-native Envoy executable and repeat
 builds have completed. Stock analysis-cache and complete-state discard controls
 also pass, producing the same verified executable digest. Their logical-heap
 results and the initial [payload audit](docs/shared-graph/payload-audit.md) do not
 establish total-host savings. Outside-memory accounting, payload selection and
 all final qualification gates remain open.
+
+A separate one-VM, 42-operation ordinary-build screen includes all edits,
+errors/recovery, GC and held pressure/refault. Sampled owned mean charges are
+4,491,426,356 bytes for warmed native, 2,533,904,261 with explicit per-owned-file
+cache advice, and 2,715,576,420 for mapped PMEM plus the same advice. The simpler
+native control is better in this short screen; no backend incremental saving is
+claimed. All arms complete the same work. These single-template runs are shorter
+than 600 useful seconds and lack complete-host accounting. Four-VM screening
+and real-VM generation renewal/rollback qualification are in progress.
 
 The available host has 32 GiB RAM. The user confirmed that no larger host is
 available. Qualify local four/eight-VM configurations only where they fit without
@@ -183,21 +198,21 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 
 ### Tasks
 
-- [ ] Follow declared arena pages from preparation through restore,
+- [x] Follow declared arena pages from preparation through restore,
   reconciliation, useful reads, branch edits, GC, held pressure, eviction and
   useful refault. Separate normal pressure from deliberate guest-cache eviction.
-- [ ] Record guest-page identity, host backing object/offset, resident coverage,
+- [x] Record guest-page identity, host backing object/offset, resident coverage,
   shared/private bytes and frame multiplicity where observable. Locate the first
   transition that creates private copies and identify its cause or uncertainty.
-- [ ] Establish equivalent shared and private-copy controls with the same
+- [x] Establish equivalent shared and private-copy controls with the same
   representation and access coverage. Verify byte contents and write isolation.
-- [ ] Correct the backing or lifecycle behavior responsible for losing sharing.
+- [x] Correct the backing or lifecycle behavior responsible for losing sharing.
   If that requires a different host-sharing mechanism, document and test a bounded
   design before integrating it; fork affected external components under
   `mattconzen` before modification.
 - [ ] Include locked/prefaulted pages, retained source copies, mapping metadata
   and any pager/helper memory in the ledger if those mechanisms are used.
-- [ ] Replay the page evidence and reusable regression checks from committed
+- [x] Replay the page evidence and reusable regression checks from committed
   metadata. Preserve failed or coverage-limited captures explicitly.
 
 ### Completion criteria
