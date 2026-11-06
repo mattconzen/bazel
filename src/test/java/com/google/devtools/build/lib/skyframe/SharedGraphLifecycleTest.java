@@ -68,6 +68,75 @@ public final class SharedGraphLifecycleTest {
   }
 
   @Test
+  public void verifiedCleanCloneRequiresPreparedOptInAndRecordsNoContentReads() throws Exception {
+    track(write("/work/input", "alpha"));
+    lifecycle.noteCommandResult("build", true);
+    lifecycle.prepare(graph, "", "", false, ImmutableList.of(), true);
+    String generation = (String) lifecycle.status().get("generation");
+    assertThrows(IllegalStateException.class, () -> lifecycle.beginReconciliation("other"));
+    lifecycle.beginReconciliation(generation);
+    assertThat(lifecycle.unchangedKeysFromVerifiedClone()).isEmpty();
+    assertThat(lifecycle.status().get("fingerprint_io").toString())
+        .contains("observations_verified_by_clone_continuity=1");
+    assertThat(lifecycle.status().get("reconciliation_change_evidence"))
+        .isEqualTo("controller-verified-unchanged-filesystem-clone");
+    lifecycle.finishReconciliation(0);
+    assertThat(lifecycle.commandRejection("build")).isNull();
+    lifecycle.retire();
+    assertThat(lifecycle.status().get("allow_controller_verified_clean_clone")).isEqualTo(false);
+  }
+
+  @Test
+  public void unpermittedCloneAssertionFailsClosedAndFullRevalidationStillDetectsEdits()
+      throws Exception {
+    var file = write("/work/input", "alpha");
+    var key = track(file);
+    String generation = prepare();
+    FileSystemUtils.writeContentAsLatin1(file, "bravo");
+    lifecycle.beginReconciliation(generation);
+    assertThrows(IllegalStateException.class, lifecycle::unchangedKeysFromVerifiedClone);
+    assertThat(lifecycle.commandRejection("build")).isNotNull();
+    lifecycle.failReconciliation("Unpermitted clone assertion");
+    lifecycle.beginReconciliation(generation);
+    assertThat(lifecycle.changedKeys()).containsExactly(key);
+  }
+
+  @Test
+  public void optedInGenerationStillUsesExactContentChecksWithoutControllerAssertion()
+      throws Exception {
+    var file = write("/work/input", "alpha");
+    var key = track(file);
+    lifecycle.noteCommandResult("build", true);
+    lifecycle.prepare(graph, "", "", false, ImmutableList.of(), true);
+    FileSystemUtils.writeContentAsLatin1(file, "bravo");
+    lifecycle.beginReconciliation((String) lifecycle.status().get("generation"));
+    assertThat(lifecycle.changedKeys()).containsExactly(key);
+    assertThat(lifecycle.status().get("reconciliation_change_evidence"))
+        .isEqualTo("full-mutable-content-and-immutable-root-proof");
+  }
+
+  @Test
+  public void cleanCloneAssertionDoesNotBypassLostImmutableRootProof() throws Exception {
+    boolean[] readonly = {true};
+    var target =
+        new SharedGraphLifecycle(
+            "heap",
+            name -> {
+              if (!readonly[0]) {
+                throw new java.io.IOException("Read-only root proof lost");
+              }
+              return java.nio.file.Path.of(name);
+            });
+    track(write("/immutable/input", "alpha"));
+    target.noteCommandResult("build", true);
+    target.prepare(graph, "", "", false, ImmutableList.of("/immutable"), true);
+    readonly[0] = false;
+    target.beginReconciliation((String) target.status().get("generation"));
+    assertThrows(java.io.IOException.class, target::unchangedKeysFromVerifiedClone);
+    assertThat(target.commandRejection("build")).isNotNull();
+  }
+
+  @Test
   public void fingerprintsDetectContentWithIdenticalMetadata() throws Exception {
     var file = write("/work/input", "alpha");
     var key = track(file);

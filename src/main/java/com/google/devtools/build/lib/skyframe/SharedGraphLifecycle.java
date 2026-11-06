@@ -63,6 +63,8 @@ final class SharedGraphLifecycle {
   private State state = State.READY;
   private boolean eligible;
   private boolean preparationComplete;
+  private boolean allowVerifiedCleanClone;
+  private String reconciliationEvidence = "none";
   private boolean fallback;
   private UUID generation;
   private String file;
@@ -366,6 +368,24 @@ final class SharedGraphLifecycle {
     prepare(graph, directory, revision, verifyRetention, immutableRoots, () -> {});
   }
 
+  void prepare(
+      InMemoryGraph graph,
+      String directory,
+      String revision,
+      boolean verifyRetention,
+      List<String> immutableRoots,
+      boolean allowVerifiedCleanClone)
+      throws IOException, InterruptedException {
+    prepare(
+        graph,
+        directory,
+        revision,
+        verifyRetention,
+        immutableRoots,
+        () -> {},
+        allowVerifiedCleanClone);
+  }
+
   @VisibleForTesting
   void prepare(
       InMemoryGraph graph,
@@ -385,6 +405,18 @@ final class SharedGraphLifecycle {
       List<String> immutableRoots,
       Runnable afterFreeze)
       throws IOException, InterruptedException {
+    prepare(graph, directory, revision, verifyRetention, immutableRoots, afterFreeze, false);
+  }
+
+  private void prepare(
+      InMemoryGraph graph,
+      String directory,
+      String revision,
+      boolean verifyRetention,
+      List<String> immutableRoots,
+      Runnable afterFreeze,
+      boolean allowVerifiedCleanClone)
+      throws IOException, InterruptedException {
     checkState(
         enabled() && graph instanceof LayeredInMemoryGraph, "Shared graph backend is disabled");
     checkState(
@@ -394,6 +426,8 @@ final class SharedGraphLifecycle {
     // filesystem, so require ordinary analysis again before a new preparation attempt.
     eligible = false;
     immutableFiles = ImmutableFiles.create(immutableRoots, readonlyPathVerifier);
+    this.allowVerifiedCleanClone = allowVerifiedCleanClone;
+    reconciliationEvidence = "none";
     // The controller must hold filesystem/workload exclusion continuously from that build through
     // snapshot publication. Re-read fingerprints to reject a filesystem changing during capture.
     phaseMetrics.clear();
@@ -625,6 +659,7 @@ final class SharedGraphLifecycle {
   }
 
   ImmutableSet<SkyKey> changedKeys() throws IOException, InterruptedException {
+    reconciliationEvidence = "full-mutable-content-and-immutable-root-proof";
     var context = new FingerprintContext(immutableFiles);
     try {
       immutableFiles.verifyRoots();
@@ -632,6 +667,31 @@ final class SharedGraphLifecycle {
     } finally {
       fingerprintIo.put("reconcile_fingerprints", context.metrics());
     }
+  }
+
+  ImmutableSet<SkyKey> unchangedKeysFromVerifiedClone() throws IOException, InterruptedException {
+    checkState(state == State.RECONCILING, "No reconciliation is in progress");
+    checkState(
+        allowVerifiedCleanClone,
+        "This generation does not permit controller-verified clean clones");
+    // This is an explicit trusted-controller contract, not filesystem evidence
+    // inferred by this JVM. The controller must prove an exact, unmodified
+    // whole-filesystem clone paired with this prepared JVM, exclude input and
+    // output writers until reconciliation, and withhold the assertion otherwise.
+    // Without that assertion the ordinary full-content path remains mandatory.
+    immutableFiles.verifyRoots();
+    checkInterrupted();
+    reconciliationEvidence = "controller-verified-unchanged-filesystem-clone";
+    fingerprintIo.put(
+        "reconcile_fingerprints",
+        Map.of(
+            "regular_files", 0L,
+            "content_bytes_read", 0L,
+            "buffer_bytes_allocated", 0L,
+            "immutable_files_content_skipped", 0L,
+            "observations_verified_by_clone_continuity", (long) observations.size()));
+    changedObservations = ImmutableList.of();
+    return ImmutableSet.of();
   }
 
   private ImmutableSet<SkyKey> changedKeys(FingerprintContext context)
@@ -685,6 +745,8 @@ final class SharedGraphLifecycle {
     state = State.READY;
     generation = null;
     preparationComplete = false;
+    allowVerifiedCleanClone = false;
+    reconciliationEvidence = "none";
     file = null;
     observations = ImmutableList.of();
     mappedBytes = 0;
@@ -704,6 +766,8 @@ final class SharedGraphLifecycle {
     status.put("mode", fallback ? "off" : mode);
     status.put("state", state.name());
     status.put("preparation_complete", preparationComplete);
+    status.put("allow_controller_verified_clean_clone", allowVerifiedCleanClone);
+    status.put("reconciliation_change_evidence", reconciliationEvidence);
     status.put("generation", generation == null ? null : generation.toString());
     status.put("arena", file);
     status.put("mapped_bytes", mappedBytes);

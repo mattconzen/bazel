@@ -288,6 +288,27 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       boolean verifyRetention,
       java.util.List<String> immutableRoots)
       throws java.io.IOException, InterruptedException {
+    return sharedGraphOperation(
+        operation,
+        directory,
+        revision,
+        generation,
+        eventHandler,
+        verifyRetention,
+        immutableRoots,
+        false);
+  }
+
+  public java.util.Map<String, Object> sharedGraphOperation(
+      String operation,
+      String directory,
+      String revision,
+      String generation,
+      ExtendedEventHandler eventHandler,
+      boolean verifyRetention,
+      java.util.List<String> immutableRoots,
+      boolean verifiedCleanClone)
+      throws java.io.IOException, InterruptedException {
     switch (operation) {
       case "prepare" -> {
         if (!trackIncrementalState) {
@@ -298,7 +319,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
             directory,
             revision,
             verifyRetention,
-            immutableRoots);
+            immutableRoots,
+            verifiedCleanClone);
       }
       case "reconcile" -> {
         sharedGraphLifecycle.beginReconciliation(generation);
@@ -314,7 +336,10 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
           }
           com.google.common.collect.ImmutableSet<SkyKey> changed;
           try (var phase = sharedGraphLifecycle.phase("reconcile_fingerprints")) {
-            changed = sharedGraphLifecycle.changedKeys();
+            changed =
+                verifiedCleanClone
+                    ? sharedGraphLifecycle.unchangedKeysFromVerifiedClone()
+                    : sharedGraphLifecycle.changedKeys();
           }
           try (var phase = sharedGraphLifecycle.phase("reconcile_monitoring")) {
             startIncrementalBuildMonitoring();

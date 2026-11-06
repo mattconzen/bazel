@@ -88,6 +88,18 @@ public final class SharedGraphCommand implements BlazeCommand {
                 + " Requires a read-only filesystem at capture and restore; mutable inputs retain"
                 + " full content checks. Repeat for multiple roots.")
     public abstract List<String> getImmutableRoots();
+
+    @Option(
+        name = "shared_graph_verified_clean_clone",
+        defaultValue = "false",
+        documentationCategory = OptionDocumentationCategory.UNDOCUMENTED,
+        effectTags = {OptionEffectTag.BAZEL_INTERNAL_CONFIGURATION},
+        help =
+            "Trusted controller only: at preparation permit unchanged-filesystem clone assertions;"
+                + " at reconciliation assert an exact, unmodified clone paired with this JVM"
+                + " generation, with all input/output writers excluded. Never set for edited or"
+                + " unproven clones. Otherwise mutable content is fully revalidated.")
+    public abstract boolean getVerifiedCleanClone();
   }
 
   @Override
@@ -106,7 +118,8 @@ public final class SharedGraphCommand implements BlazeCommand {
               settings.getGeneration(),
               env.getReporter(),
               settings.getVerifyRetention(),
-              settings.getImmutableRoots());
+              settings.getImmutableRoots(),
+              settings.getVerifiedCleanClone());
       env.getReporter()
           .getOutErr()
           .printOutLn(new com.google.gson.GsonBuilder().serializeNulls().create().toJson(status));

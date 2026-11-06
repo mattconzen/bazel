@@ -51,6 +51,57 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
   }
 
   @Test
+  public void verifiedUnchangedCloneRetainsEvaluatorAndLaterOrdinaryEditsInvalidate()
+      throws Exception {
+    scratch.file("pkg/data.txt", "old");
+    scratch.file("pkg/BUILD", "filegroup(name='files', srcs=glob(['*.txt']))");
+    update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
+    var executor = (SequencedSkyframeExecutor) skyframeExecutor;
+    var evaluator = executor.getEvaluator();
+    executor.setEventBus(new EventBus());
+    executor.drainChangedFiles();
+    executor.noteSharedGraphCommandResult("build", true);
+    var prepared =
+        executor.sharedGraphOperation(
+            "prepare",
+            mode.equals("mapped") ? arena.newFolder().getAbsolutePath() : "",
+            "0123456789abcdef0123456789abcdef01234567",
+            "",
+            reporter,
+            false,
+            ImmutableList.of(),
+            true);
+    var resumed =
+        executor.sharedGraphOperation(
+            "reconcile",
+            "",
+            "",
+            (String) prepared.get("generation"),
+            reporter,
+            false,
+            ImmutableList.of(),
+            true);
+    assertThat(resumed.get("state")).isEqualTo("READY");
+    assertThat(resumed.get("changed_nodes")).isEqualTo(0);
+    assertThat(resumed.get("reconciliation_change_evidence"))
+        .isEqualTo("controller-verified-unchanged-filesystem-clone");
+    assertThat(executor.getEvaluator()).isSameInstanceAs(evaluator);
+    scratch.overwriteFile("pkg/data.txt", "new");
+    scratch.file("pkg/added.txt", "added");
+    // BuildViewTestCase.update invokes analysis directly, not the ordinary
+    // command's filesystem-diff phase. Supply its standard invalidation hook;
+    // these edits do not change configuration inputs.
+    invalidatePackages(/* alsoConfigs= */ false);
+    update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
+    assertThat(executor.getEvaluator()).isSameInstanceAs(evaluator);
+    assertThat(
+            getFilesToBuild(getConfiguredTarget("//pkg:files")).toList().stream()
+                .map(a -> a.getFilename())
+                .toList())
+        .containsExactly("data.txt", "added.txt");
+  }
+
+  @Test
   public void reconciliationInitializesProgressReceiverAndRetainsEvaluator() throws Exception {
     scratch.file("pkg/data.txt", "old");
     scratch.file("pkg/BUILD", "filegroup(name='files', srcs=glob(['*.txt']))");
