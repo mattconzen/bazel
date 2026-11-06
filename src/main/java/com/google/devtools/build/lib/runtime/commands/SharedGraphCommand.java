@@ -38,7 +38,7 @@ import java.util.List;
     buildPhase = NONE,
     allowResidue = true,
     options = {SharedGraphCommand.Options.class},
-    help = "Usage: %{product} shared_graph prepare|rebind|reconcile|status|discard\n%{options}",
+    help = "Usage: %{product} shared_graph prepare|rebind|prefault|reconcile|status|discard\n%{options}",
     shortDescription = "Coordinates experimental snapshot-coupled graph state.")
 public final class SharedGraphCommand implements BlazeCommand {
   @OptionsClass
@@ -118,7 +118,7 @@ public final class SharedGraphCommand implements BlazeCommand {
     try {
       if (options.getResidue().size() != 1) {
         throw new IllegalArgumentException(
-            "Expected prepare, rebind, reconcile, status, or discard");
+            "Expected prepare, rebind, prefault, reconcile, status, or discard");
       }
       var settings = options.getOptions(Options.class);
       var executor = (SequencedSkyframeExecutor) env.getSkyframeExecutor();

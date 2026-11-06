@@ -393,6 +393,8 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       case "rebind" ->
           sharedGraphLifecycle.rebindArena(
               memoizingEvaluator.getInMemoryGraph(), rebindArena, generation);
+      case "prefault" ->
+          sharedGraphLifecycle.prefaultArena(memoizingEvaluator.getInMemoryGraph(), generation);
       case "discard" -> {
         graphFactory = InMemoryGraphFactory.DEFAULT;
         resetEvaluator();
@@ -401,7 +403,7 @@ public class SequencedSkyframeExecutor extends SkyframeExecutor {
       case "status" -> {}
       default ->
           throw new IllegalArgumentException(
-              "Expected prepare, rebind, reconcile, status, or discard");
+              "Expected prepare, rebind, prefault, reconcile, status, or discard");
     }
     var status = sharedGraphLifecycle.status();
     if (memoizingEvaluator.getInMemoryGraph()

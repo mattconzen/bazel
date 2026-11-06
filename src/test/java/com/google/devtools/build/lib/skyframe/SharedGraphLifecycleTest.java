@@ -165,6 +165,43 @@ public final class SharedGraphLifecycleTest {
   }
 
   @Test
+  public void arenaPrefaultPreservesAdmissionAndRejectsWrongGeneration() throws Exception {
+    var target = new SharedGraphLifecycle("mapped", java.nio.file.Path::of);
+    target.noteCommandResult("build", true);
+    target.prepare(graph, temporaryFolder.newFolder().getAbsolutePath(), "0".repeat(40));
+    String generation = (String) target.status().get("generation");
+    assertThrows(IllegalStateException.class, () -> target.prefaultArena(graph, "wrong"));
+    target.prefaultArena(graph, generation);
+    assertThat(target.commandRejection("build")).contains("PREPARED");
+    target.beginReconciliation(generation);
+    assertThat(target.changedKeys()).isEmpty();
+    target.finishReconciliation(0);
+    target.prefaultArena(graph, generation);
+    assertThat(target.commandRejection("build")).isNull();
+  }
+
+  @Test
+  public void failedArenaPrefaultBlocksOrdinaryCommandsAndRequiresDiscard() throws Exception {
+    var target = new SharedGraphLifecycle("mapped", java.nio.file.Path::of);
+    target.noteCommandResult("build", true);
+    target.prepare(graph, temporaryFolder.newFolder().getAbsolutePath(), "0".repeat(40));
+    String generation = (String) target.status().get("generation");
+    target.beginReconciliation(generation);
+    target.changedKeys();
+    target.finishReconciliation(0);
+    var file = java.nio.file.Path.of((String) target.status().get("arena"));
+    byte[] bytes = java.nio.file.Files.readAllBytes(file);
+    bytes[bytes.length - 1] ^= 1;
+    java.nio.file.Files.setPosixFilePermissions(
+        file, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
+    java.nio.file.Files.write(file, bytes);
+    assertThrows(java.io.IOException.class, () -> target.prefaultArena(graph, generation));
+    assertThat(target.status().get("preparation_complete")).isEqualTo(false);
+    assertThat(target.commandRejection("build")).isNotNull();
+    assertThrows(IllegalStateException.class, () -> target.beginReconciliation(generation));
+  }
+
+  @Test
   public void corruptRebindCannotReopenAdmission() throws Exception {
     var target = new SharedGraphLifecycle("mapped", java.nio.file.Path::of);
     target.noteCommandResult("build", true);

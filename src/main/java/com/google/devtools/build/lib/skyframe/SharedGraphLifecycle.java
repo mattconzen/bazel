@@ -709,6 +709,29 @@ final class SharedGraphLifecycle {
     reconciliationNanos = System.nanoTime();
   }
 
+  /** Intrusive full-access diagnostic; never use it in an unperturbed memory comparison. */
+  void prefaultArena(InMemoryGraph graph, String expectedGeneration)
+      throws IOException, InterruptedException {
+    checkState(generation != null && generation.toString().equals(expectedGeneration),
+        "Generation mismatch");
+    checkState("mapped".equals(mode) && graph instanceof LayeredInMemoryGraph,
+        "Arena prefault requires the mapped backend");
+    checkState(preparationComplete && (state == State.PREPARED || state == State.READY),
+        "Arena prefault requires a complete prepared or reconciled generation");
+    try {
+      verifyReboundArenaFilesystem();
+      var layered = (LayeredInMemoryGraph) graph;
+      layered.verifyBaseline();
+      layered.prefaultBaseline();
+      checkInterrupted();
+    } catch (IOException | InterruptedException | RuntimeException | Error error) {
+      state = State.PREPARED;
+      preparationComplete = false;
+      failure = "Arena prefault verification failed; discard this generation: " + error;
+      throw error;
+    }
+  }
+
   void verifyReboundArenaFilesystem() throws IOException {
     if (!arenaRebound) {
       return;

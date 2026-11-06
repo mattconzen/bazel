@@ -50,3 +50,12 @@ eviction/refault. Controller integration, old mapping/cache attribution, physica
 page evidence and complete memory accounting remain required. Old root-disk
 arena copies and all source/cache/staging memory must remain visible in the
 ledger until actually released.
+
+`shared_graph prefault --shared_graph_generation=UUID` is an intrusive full-access
+diagnostic for the mapped arena in the matching complete PREPARED or READY
+generation. It verifies integrity and rebound read-only filesystem proof, then
+reads a byte from every mapped page in the JVM. It preserves the admission state
+on success; a failed integrity/prefault operation blocks ordinary commands and
+requires discard. This supplies explicit full access for the sharing/private-copy
+mechanism control after host eviction. Record it as observer work and exclude it
+from unperturbed useful-work memory comparisons. It has no speed target.
