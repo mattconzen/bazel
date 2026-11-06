@@ -131,9 +131,20 @@ repository replacement. The diagnostic's owned peak is 13,246,414,848 bytes with
 zero swap, OOM or owned-limit reclaim; it is not a lifetime saving comparison.
 The [lifecycle bundle and replay tool](https://github.com/mattconzen/bazel-shared-graph-bench/tree/68b76c9/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/generation-lifecycle-evidence)
 preserve raw commands, exact sources and five rejected forged-receipt controls.
-New guest free-page reporting and G1 heap-release policies remain opt-in and are
-under separate native/mapped screening with unchanged nominal RAM and maximum
-heap. All final memory gates remain open.
+Guest free-page reporting and G1 heap release remain opt-in, with unchanged
+nominal RAM and maximum heap. Their one-VM combined native screen completes the
+same 42 operations with mean owned charge 2,164,148,677 bytes. Actual terminal
+heap commitment is 310,378,496 bytes with 280,574,976 used, versus reporting
+alone's 787,480,576 committed and 281,327,616 used. These logical quantities do
+not establish reclaimed physical bytes. The mapped combination completes the
+useful work and terminal native actions with sampled owned mean 2,420,212,989,
+but its terminal page observer fails on split RAM mappings. It remains failed,
+and its recovered raw JVM text is unavailable. No backend advantage is claimed.
+The guest order setup and physical observer have bounded corrections; fresh
+four-VM screening is running. All final memory gates remain open.
+The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
+retains successful screens, failed attempts, scope limits and four portable
+replays with fourteen rejected forged-receipt controls.
 
 The available host has 32 GiB RAM. The user confirmed that no larger host is
 available. Qualify local four/eight-VM configurations only where they fit without
@@ -147,7 +158,7 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 
 ### Tasks
 
-- [ ] Profile unmodified native Bazel through the representative Envoy workload,
+- [x] Profile unmodified native Bazel through the representative Envoy workload,
   including a full executable build where needed to reproduce the claimed
   GB-scale footprint. Label analysis, compilation and linking separately.
 - [ ] Retain the current analysis/version-library case as a regression fixture.
