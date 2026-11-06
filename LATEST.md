@@ -203,8 +203,20 @@ the pressure helper after 29 of 42 operations. The failed case receives no
 memory/admission credit; plan 01 is preserved unchanged and will not run. New
 guest OOM counter checks supplement host events and helper liveness. Fresh
 native references are being collected with **3 GiB guest RAM equally for every
-arm**, preserving the 768 MiB heap and 512 MiB pressure. New capacity, coverage,
-sharing and plan pins are required before independent collection. No independent
+arm**, preserving the 768 MiB heap and 512 MiB pressure. All seven fresh native
+reference states now complete with equivalent input/action/output/error contracts.
+Eight-VM native/off screens complete 42 operations, final baseline hashes and
+guest/host safety checks; each rejects seventeen altered receipts. Native mean
+owned charge is 15,429,079,566 bytes and off 15,995,532,072, with short useful
+windows of 176.109/202.066 seconds. The mapped preflight then rejects missing
+guest counters in its specialized DAX response, before useful work. The
+[preserved preflight bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/c0ad1db/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/three-gib-reference-and-preflight)
+retains the failed master/mapped case and completed native/off children.
+The metadata correction appends real guest counters while retaining unavailable
+DAX RSS; fresh mapped and optimized-native admission runs have separate pins.
+The treemap policy collector now supports explicit 2/3 GiB geometry and exact
+legacy replay; live 3 GiB ownership capture remains required. New capacity,
+coverage, sharing/lifecycle and plan pins are required before independent collection. No independent
 seed has launched. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
