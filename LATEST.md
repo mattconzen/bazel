@@ -231,8 +231,17 @@ seventeen altered-receipt controls pass, including a fresh portable extraction.
 The [committed coverage bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/3563ee4/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/three-gib-useful-coverage-pilot)
 selects the two-epoch, 1,087-operation prefix, which covers 823.273749723 useful
 seconds. It remains a screening case, never an independent seed. The new two-VM
-3 GiB/512 MiB-pressure sharing/refault diagnostic is running with explicit seed
-and per-control guest OOM checks. The older 425-check mechanism replay still
+3 GiB/512 MiB-pressure sharing/refault diagnostic completes 431 checks and all
+14 captures. Shared backing retains one 31,363,072-byte selected copy versus
+two copies with independent backing through divergence, GC, held pressure,
+actual guest/host eviction/refault and revert. Seed and both controls' guest OOM
+counters are zero. Full original image hashes, eighteen altered-receipt controls
+and fresh portable raw replay pass. The
+[current-runtime mechanism bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5771166/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/three-gib-pmem-evidence)
+records its whole-diagnostic owned peak of 19,894,378,496 bytes, including retained
+checkpoints/backing and intrusive verification. That peak is not a lifetime mean
+or a whole-VM saving. Supporting-memory accounting remains open. The 3 GiB
+candidate-policy lifecycle run is now active. The older 425-check mechanism replay still
 passes but explicitly reports no guest OOM-counter coverage; it is not upgraded.
 The treemap policy collector now supports explicit 2/3 GiB geometry and exact
 legacy replay; live 3 GiB ownership capture remains required.
