@@ -179,9 +179,17 @@ fails. These snapshots do not qualify unperturbed lifetime savings. The
 retain raw evidence, 18 PNGs, native/mapped comparison tooling, portable replay,
 17/21 rejected altered receipts and explicit failed-render/supervisor records.
 Full lifecycle backing images also pass an independent rehash after all readers
-exit. Eight-VM capacity screening is underway; native completes the short trace
-with mean owned charge 12,011,073,669 bytes, peak 14,260,097,024 and minimum host
-MemAvailable 17,178,714,112. Independent comparison seeds remain pending. The
+exit. Eight-VM short capacity screening completes all four arms. Native mean
+owned charge is 12,011,073,669 bytes, patched-off 12,108,960,967, optimized native
+8,010,206,068 and mapped with the same policies 8,696,474,230. Native whole-case
+peak is 14,260,097,024 bytes and minimum host MemAvailable 17,178,714,112.
+These screens use 128 MiB held pressure per guest; they do not satisfy the
+representative contract's 512 MiB pressure requirement. All four portable raw
+replays and 68 altered-arm-receipt controls pass. The
+[capacity bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/1729523/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/eight-vm-capacity)
+also preserves raw kernel/cache diagnostics and seven rejected corruptions.
+Kernel residuals remain unassigned and cannot substitute for outside-memory
+bounds. Independent comparison seeds remain pending. The
 proposed fixed trace is undergoing a separate observation-coverage preflight
 before its final operation count is frozen; cached actions can shorten later
 epochs. No idle padding or unequal per-arm work is permitted.
@@ -204,10 +212,13 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [x] Profile unmodified native Bazel through the representative Envoy workload,
   including a full executable build where needed to reproduce the claimed
   GB-scale footprint. Label analysis, compilation and linking separately.
-- [ ] Retain the current analysis/version-library case as a regression fixture.
-  Add a separately pinned larger-workload protocol when necessary; provision
-  enough guest/host memory for native to complete and match resources across
-  arms. Do not treat the current 768 MiB-heap case as representative by assumption.
+- [x] Retain the current analysis/version-library regression fixture and a
+  separately pinned larger full-executable native protocol. See the benchmark
+  fork's `LARGE-ENVOY-PROTOCOL.md` and completed 4 GiB-heap host diagnostic.
+- [ ] Admit any larger full-executable VM comparison using enough memory for
+  native to complete, then match resources across arms. No larger guest image or
+  four-VM full-build comparison is yet qualified. Do not treat the current
+  768 MiB-heap case as representative by assumption.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
   processes, kernel memory and file/buffer cache at matching checkpoints.
@@ -253,6 +264,10 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [ ] Cover both template preparation and clone restoration. Remove avoidable
   toolchain-cache population, retained observation tables, temporary copies and
   construction buffers; preserve required arena/integrity checks.
+  The [retention audit](docs/shared-graph/restore-retention-audit.md) distinguishes
+  required fallback observations, released construction locals and remaining
+  measured view/record overhead. Its possible wrapper reduction is not implemented
+  or counted as physical savings.
 - [ ] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
