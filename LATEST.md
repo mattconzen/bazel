@@ -189,10 +189,14 @@ replays and 68 altered-arm-receipt controls pass. The
 [capacity bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/1729523/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/eight-vm-capacity)
 also preserves raw kernel/cache diagnostics and seven rejected corruptions.
 Kernel residuals remain unassigned and cannot substitute for outside-memory
-bounds. Independent comparison seeds remain pending. The
-proposed fixed trace is undergoing a separate observation-coverage preflight
-before its final operation count is frozen; cached actions can shorten later
-epochs. No idle padding or unequal per-arm work is permitted.
+bounds. Independent comparison seeds remain pending. Two complete epochs of the
+separate four-epoch coverage pilot take 839.738615535 useful seconds. The
+[committed predeclared plan](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d080b7c/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials)
+pins that 1,087-operation trace, three independent blocks per arm/count, four
+arms, four/eight VMs, analysis tools and 512 MiB held pressure per guest. Trial
+admission still requires the pilot's final integrity checks and a fresh eight-VM
+native capacity check at 512 MiB. No independent seed has launched. No idle
+padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
@@ -231,9 +235,12 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [ ] Rank opportunities by attributable private resident bytes, semantic reuse,
   GC/write behavior and expected replacement overhead. Include opportunities
   outside the current mapped dependency vectors.
-- [ ] Pin source/binary/image identities, toolchains, observed JVM/GC settings,
+- [x] Pin source/binary/image identities, toolchains, observed JVM/GC settings,
   execution/cache policy, input states, resources, useful work and memory
-  checkpoints. Predeclare the primary comparison and decision rule.
+  checkpoints. Predeclare the primary comparison and decision rule. The committed
+  independent plan and lifetime protocol pin the primary 600-second interval,
+  raw replay, paired seed arithmetic and unknown complete-host bounds before
+  comparison collection; prior short diagnostics keep their original pins.
 
 ### Completion criteria
 
