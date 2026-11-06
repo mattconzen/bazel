@@ -1,6 +1,7 @@
 # Memory sharing and reduction: current roadmap
 
-Updated 2026-11-05. All tasks below are open work for the next iteration.
+Updated 2026-11-05. Task-level acceptance remains open; completed implementation
+subtasks are checked below.
 
 Reduce total resident host memory across related Bazel microVM builds while
 preserving correctness, branch isolation and safe lifecycle handling. Demonstrate
@@ -58,6 +59,25 @@ not authorize an unmeasured adapter or make an earlier failed gate pass.
    memory acceptance decision. A payload is unnecessary if another qualified
    change already meets the objectives.
 
+## Implementation checkpoint
+
+Source `162c8248c689f447e35a8fbcee57a2f2be9afdca` and controller `768265e`
+implement opt-in [immutable input roots](docs/shared-graph/immutable-inputs.md)
+and [controller-verified unchanged filesystem clones](docs/shared-graph/verified-clean-clones.md).
+Four affected Java suites pass. The live one-VM clean-clone preflight passes
+eight fresh-native action/output, admission and integrity checks. Reconciliation
+reads zero regular-file content bytes, using clone continuity for 53,974 saved
+observations; arena verification remains required. This completes a scan-path
+correction, not four-VM memory parity or the overall reduction objective.
+
+A separate stock-Firecracker PMEM snapshot byte pilot passes 56 checks and 14
+captures, with 4 MiB shared selected residency versus 8 MiB for independent
+backing in two VMs. Its committed metadata replays. It covers held guest pressure
+and guest mapping/refault; Bazel integration, JVM GC and host backing-cache
+eviction/refault remain open. The GB-scale full-native profile is still running.
+Outside-memory accounting, the native memory-saving control, payload selection
+and all final qualification gates remain open.
+
 ## L-01 — Identify the GB-scale opportunity and establish controls
 
 **Related obligations:** SG-001, SG-002, SG-004, SG-009.
@@ -108,10 +128,10 @@ not authorize an unmeasured adapter or make an earlier failed gate pass.
 
 ### Tasks
 
-- [ ] Replace blanket regular-file content scanning with trustworthy filesystem
+- [x] Replace blanket regular-file content scanning with trustworthy filesystem
   change evidence. Distinguish immutable template/toolchain inputs, mutable
   workspace/output state and observations whose history cannot be trusted.
-- [ ] Reuse Bazel's existing invalidation machinery where its evidence remains
+- [x] Reuse Bazel's existing invalidation machinery where its evidence remains
   valid across restore. Define the trust boundary explicitly; use safe content
   revalidation or native fallback when continuity is unavailable.
 - [ ] Cover both template preparation and clone restoration. Remove avoidable
