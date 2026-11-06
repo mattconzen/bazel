@@ -299,6 +299,10 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   Conditional rstat flushing and cross-CPU event aggregation still require a
   justified error/interval model; no numerical bound or full-binary attestation
   is claimed, and the existing unknown fields remain null.
+  The separate [ordered-input recorder smoke](https://github.com/mattconzen/bazel-shared-graph-bench/tree/9c316da/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-accounting-input-smoke)
+  now preserves timed global/owned/root/zone counter reads in bounded compressed
+  memfds. Five tests and a 21-sample real-host capture/replay pass. It is not
+  integrated into lifetime comparisons and certifies no accounting error bound.
 - [x] Keep unmodified warmed native as the primary control and patched-off as
   the implementation control. Add a separate native memory-saving control using
   applicable stock cache-discard options. Record exact options and verify its
