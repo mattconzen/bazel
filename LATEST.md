@@ -257,19 +257,30 @@ verifies its content and records expected strict rejection, not a lifecycle pass
 or memory/correctness failure. The older 425-check mechanism replay still
 passes but explicitly reports no guest OOM-counter coverage; it is not upgraded.
 The treemap policy collector now supports explicit 2/3 GiB geometry and exact
-legacy replay. A fresh matched native/mapped four-VM 3 GiB ownership capture is
-running with 512 MiB held pressure and the same reporting, heap-release and
-owned-file advice policies in both arms. Its results remain pending.
+legacy replay. The matched native/mapped four-VM 3 GiB ownership capture now
+completes all 42 operations per arm with 512 MiB held pressure and the same
+reporting, heap-release and owned-file advice policies. Final cohort VMM PSS is
+3,457,107,968 native versus 3,897,926,656 mapped: 440,818,688 bytes / 12.75% higher
+for mapped, including 405,667,157 modeled extra private Java-heap bytes. These
+intrusive snapshots have substantial probe effects and do not identify a causal
+allocation site. Unknown ownership is 11.445% native / 11.197% mapped; both
+correctly fail the unchanged 5% ownership guard. The
+[current-runtime ownership bundle and eighteen PNGs](https://github.com/mattconzen/bazel-shared-graph-bench/tree/15cd068/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/three-gib-policy-memory-attribution)
+preserve full raw replay, fresh portable extraction, twenty/twenty-four rejected
+altered receipts, final baseline hashes and zero recorded guest/host OOM or swap.
+Both final PNGs were visually inspected. No net backend memory benefit is shown.
 The subsequent [raw owner-input tooling](https://github.com/mattconzen/bazel-shared-graph-bench/commit/ae0317e)
 preserves the before/after kernel page flags and observed userspace masks, so
 future physical replays can recompute ownership labels and investigate unknown
 frames. Thirty-six focused checks pass under both capture/render Python runtimes;
 the earlier terminal four-VM native capture replays with exactly unchanged
 attribution. No unknown frames have been newly assigned and the 5% guard remains
-unchanged. Live schema-2 ownership replay is still pending. Current-runtime
+unchanged. All thirty-two guest observations in the new 3 GiB diagnostic now
+contain schema-2 inputs and pass strict physical replay. Current-runtime
 capacity, useful coverage, sharing and lifecycle diagnostics have passed their
-declared scopes. Ownership capture and final plan/source pins remain required
-before independent collection. No independent
+declared scopes. Ownership replay is complete with its failing uncertainty guard
+preserved. Accounting-observer integration and final plan/source pins remain
+required before independent collection. No independent
 seed has launched. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
