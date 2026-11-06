@@ -227,7 +227,14 @@ These separate short screens do not qualify a complete-host or independent
 lifetime comparison. A fresh four-VM patched-off coverage pilot is running at
 3 GiB RAM and 512 MiB pressure, with four fixed epochs and 2,169 operations.
 The treemap policy collector now supports explicit 2/3 GiB geometry and exact
-legacy replay; live 3 GiB ownership capture remains required. New capacity,
+legacy replay; live 3 GiB ownership capture remains required.
+The subsequent [raw owner-input tooling](https://github.com/mattconzen/bazel-shared-graph-bench/commit/ae0317e)
+preserves the before/after kernel page flags and observed userspace masks, so
+future physical replays can recompute ownership labels and investigate unknown
+frames. Thirty-six focused checks pass under both capture/render Python runtimes;
+the earlier terminal four-VM native capture replays with exactly unchanged
+attribution. No unknown frames have been newly assigned and the 5% guard remains
+unchanged. Live schema-2 ownership capture is still pending. New capacity,
 coverage, sharing/lifecycle and plan pins are required before independent collection. No independent
 seed has launched. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
