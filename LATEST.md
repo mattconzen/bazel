@@ -198,9 +198,14 @@ arms, four/eight VMs, analysis tools and 512 MiB held pressure per guest. The
 now completes all 2,169 operations over 1,640.751236496 useful seconds, final
 baseline hashes and portable raw replay. Its fifteen altered-receipt controls
 pass. It retains its screening flag and 128 MiB pressure scope. Trial admission
-still requires the fresh eight-VM native capacity check at 512 MiB, currently
-running. No independent seed has launched. No idle padding or unequal per-arm
-work is permitted.
+fails at the fresh eight-VM native 512 MiB capacity check: guest zero OOM kills
+the pressure helper after 29 of 42 operations. The failed case receives no
+memory/admission credit; plan 01 is preserved unchanged and will not run. New
+guest OOM counter checks supplement host events and helper liveness. Fresh
+native references are being collected with **3 GiB guest RAM equally for every
+arm**, preserving the 768 MiB heap and 512 MiB pressure. New capacity, coverage,
+sharing and plan pins are required before independent collection. No independent
+seed has launched. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
@@ -239,12 +244,13 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [ ] Rank opportunities by attributable private resident bytes, semantic reuse,
   GC/write behavior and expected replacement overhead. Include opportunities
   outside the current mapped dependency vectors.
-- [x] Pin source/binary/image identities, toolchains, observed JVM/GC settings,
+- [ ] Pin source/binary/image identities, toolchains, observed JVM/GC settings,
   execution/cache policy, input states, resources, useful work and memory
   checkpoints. Predeclare the primary comparison and decision rule. The committed
-  independent plan and lifetime protocol pin the primary 600-second interval,
-  raw replay, paired seed arithmetic and unknown complete-host bounds before
-  comparison collection; prior short diagnostics keep their original pins.
+  plan 01 and lifetime protocol pin the primary 600-second interval, raw replay,
+  paired seed arithmetic and unknown complete-host bounds. Plan 01 was never
+  run and is superseded after failed guest-pressure admission. Reopen these pins
+  for the matched 3 GiB runtime; prior diagnostics keep their original identities.
 
 ### Completion criteria
 
