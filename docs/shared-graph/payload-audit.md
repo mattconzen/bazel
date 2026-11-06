@@ -1,7 +1,8 @@
 # Initial full-Envoy memory opportunity audit
 
 This L-01/L-04 checkpoint records measured ownership before selecting another
-payload. The backing qualification remains open. No new payload adapter is
+payload. Declared arena sharing is now proved through GC, pressure and host
+backing refault; complete supporting-memory qualification remains open. No new payload adapter is
 justified by this document, and these diagnostic quantities are not a total-host
 savings result.
 
@@ -82,9 +83,8 @@ without ownership analysis.
    have simpler contracts, but their measured bytes currently support a smaller
    opportunity. Do not expand the format without a net estimate and API proof.
 
-No second payload is selected. The next direction is to complete the existing
-Bazel DAX sharing fixture and complete physical cache/JVM attribution, then
-record a bounded candidate's removable bytes and full replacement costs. This
+No second payload is selected. The next direction is to complete supporting
+cache/JVM attribution and test the bounded policies below. This
 decision does not treat the current encoded arena size as a ceiling on possible
 whole-VM improvements. It also does not infer GB of offloadable graph objects
 from GB of total resident memory.
@@ -111,3 +111,64 @@ Raw runs remain in `shared-graph-latest-native-warmed-01`, `-warmed-02`,
 benchmark fork retains reusable producers/analyzers; bounded committed evidence
 bundles retain exact run configurations and measured source bytes separately
 from the large heap, disk and RAM images.
+
+## Bounded controller/JVM candidate selected for screening
+
+The actual Bazel/JVM DAX fixture now passes 425 checks and 14 captures. Two VMs
+share 31,363,072 rounded resident arena bytes versus 62,726,144 with independent
+backing, including JVM GC, held pressure, actual backing eviction and useful
+refault. Full and portable replay pass. These intrusive checks prove the declared
+mechanism, not a whole-VM saving or an incremental backend advantage.
+
+In the separate fixed 42-operation ordinary-build screen, one-VM owned means
+are 4,491,426,356 bytes for native, 2,533,904,261 for native with targeted
+root/RAM backing-cache advice, and 2,715,576,420 for mapped PMEM with the same
+advice. Final native file charge is approximately 2.85 GB without advice and
+175 MB with it. These independent short templates are diagnostics, not paired
+causal estimates or 600-second qualification. Native with the simpler policy
+uses less memory than mapped in this screen.
+
+The first four-VM ordinary screen completes the same workload with native mean
+owned charge 7,781,932,366 bytes and mapped PMEM plus advice 6,888,651,917 bytes,
+about 11.5% lower. Other controls are still running. End-of-trace native VMM PSS
+is 5,998,228,480 bytes and the overlapping unit charge is 9,415,147,520 bytes;
+its file component is 3,833,614,336 bytes. Do not sum these quantities. Guest
+free RAM totals approximately 3.09 GB, which does not establish how many of
+those pages are privately resident on the host.
+
+The next bounded screening candidate combines these explicit policies:
+
+1. **Owned backing-cache advice.** Continue the tested per-file policy for only
+   private root disks and immutable RAM backing, including it in a separate
+   native control. The one-VM screen identifies a GB-scale cache opportunity;
+   the four-VM comparison must establish its effect at the primary clone count.
+2. **Guest free-page reporting.** Enable stock Firecracker 1.17.0 reporting with
+   a zero-size balloon, no OOM deflation and guest reporting order zero. The
+   pinned kernel already has the required driver. Keep nominal RAM unchanged.
+   The expected removable set is host-resident mappings of guest allocator free
+   pages; its intersection with private residency is unmeasured, bounded above
+   by guest free bytes, and must not be assumed to equal that upper bound.
+3. **Return unused committed JVM heap.** Screen explicit
+   `-XX:MinHeapFreeRatio=5`, `-XX:MaxHeapFreeRatio=10` and
+   `-XX:-ShrinkHeapInSteps`, with the same maximum heap and GC family. In the
+   one-VM mapped seed, 284,691,712 used heap bytes coexist with 805,306,368
+   committed bytes. The simple 10%-free model suggests roughly 316 MB committed,
+   potentially about 489 MB less per VM at that checkpoint, before collector
+   constraints, fragmentation, native costs and later allocations. This is a
+   committed-heap opportunity estimate, not recoverable physical bytes. Reporting
+   must actually return released guest pages to reduce VMM residency.
+
+The JVM policy is recorded here before implementation. Flag support and actual
+settings, live data, output correctness, GC, pressure, refault and total memory
+still require testing. There is no execution-time objective. Devices, queues,
+reporting work, temporary allocations, snapshot backing and native heap remain
+costs. The three expected removable sets overlap; never add their upper bounds.
+No new decoded cache, payload wrapper or value materialization is introduced.
+
+Run the same policy combination on unmodified native to isolate the shared
+backend's incremental value. A controller/JVM result would satisfy only its
+demonstrated memory scope and would not prove that graph offloading caused it.
+The warmed-native primary and patched-off controls remain required, with exact
+pins and identical completed useful work. Freeze the trace after these separate
+screens; independent comparisons, outside-memory accounting and the final
+25% decision remain open.
