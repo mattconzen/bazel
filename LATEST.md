@@ -359,8 +359,12 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [ ] Audit equality, hashing, identity, traversal, mutation and lifetime contracts
   for the selected family. Select nested sets only with their separate identity
   design and tests; do not assume a concrete subclass is interchangeable.
-- [ ] Record the selected bounded change and expected removable bytes before
-  implementation. Defer candidates without a demonstrated opportunity.
+- [x] Record the selected bounded change and expected removable bytes before
+  implementation, or explicitly defer candidates without a demonstrated
+  opportunity. The [value-family API audit](docs/shared-graph/payload-api-audit.md)
+  records no new family selected: concrete caller/clearing contracts and unknown
+  replacement/resident costs do not justify expansion. The previously selected
+  controller/JVM policies retain their separate pre-implementation estimate.
 - [ ] Implement one family at a time using the backing proved in L-03. Bound
   materialization caches by bytes and generation and keep mutable state private.
 - [ ] Prove replaced Java storage and construction buffers are released. Test

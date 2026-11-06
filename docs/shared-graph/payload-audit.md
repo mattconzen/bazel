@@ -100,6 +100,9 @@ cache/JVM attribution and test the bounded policies below. This
 decision does not treat the current encoded arena size as a ceiling on possible
 whole-VM improvements. It also does not infer GB of offloadable graph objects
 from GB of total resident memory.
+The [initial value-family API audit](payload-api-audit.md) records concrete
+configured-target/package consumers, clearing and caller-retention obligations,
+the limits of the existing remote codec and the explicit deferral decision.
 
 ## Physical owner checkpoint after the selected policies
 
