@@ -140,8 +140,22 @@ not establish reclaimed physical bytes. The mapped combination completes the
 useful work and terminal native actions with sampled owned mean 2,420,212,989,
 but its terminal page observer fails on split RAM mappings. It remains failed,
 and its recovered raw JVM text is unavailable. No backend advantage is claimed.
-The guest order setup and physical observer have bounded corrections; fresh
-four-VM screening is running. All final memory gates remain open.
+The guest order setup and physical observer have bounded corrections. The fresh
+four-VM screen now passes all four arms: ordinary native mean owned charge is
+7,813,791,985 bytes, patched-off 7,589,238,558, optimized native 4,897,742,853 and
+mapped PMEM with the same policies 5,448,544,503. Mapped is 30.3% below ordinary
+native but 11.2% above optimized native in these short, single-template screens.
+The terminal page observer now passes, recording 125,452,288 selected mapping
+bytes backed by 31,363,072 unique file bytes, zero private copies and four-way
+multiplicity. All traces remain shorter than 600 useful seconds and unresolved
+outside-memory/counter error prevents a complete-host result. Successful retired
+images were removed; these older screens lack retrospective full baseline hashes.
+The [four-VM policy evidence](https://github.com/mattconzen/bazel-shared-graph-bench/tree/400b2cd/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/four-vm-policy-screen)
+retains raw sources/work/page/JVM observations, four portable replays and eighteen
+rejected forged-receipt controls. New opt-in ownership diagnostics support split
+RAM and export PNG treemaps; new runs also verify complete baseline asset hashes
+after all readers close, outside useful measurement. Those tool additions do not
+upgrade the older measurements. All final memory gates remain open.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
