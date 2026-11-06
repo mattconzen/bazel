@@ -240,28 +240,36 @@ and fresh portable raw replay pass. The
 [current-runtime mechanism bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5771166/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/three-gib-pmem-evidence)
 records its whole-diagnostic owned peak of 19,894,378,496 bytes, including retained
 checkpoints/backing and intrusive verification. That peak is not a lifetime mean
-or a whole-VM saving. Supporting-memory accounting remains open. The 3 GiB
-candidate-policy lifecycle qualification is now running as a fresh corrected
-case with 338 captured sources, including the imported OOM helper and static
-dependency collector. Its manifest matches the launch-time preflight. The
+or a whole-VM saving. Supporting-memory accounting remains open. The corrected
+3 GiB candidate-policy lifecycle qualification now passes 401 checks and twelve
+fresh-native comparisons across two independently prepared generations, with up
+to three live VMMs. All 338 captured sources match launch-time preflight and final
+hashes. Guest OOM counters, owned OOM/limit events and swap are zero. Full original
+image verification, nine altered-receipt controls and fresh portable replay pass.
+The [current-runtime lifecycle bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/029500a/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/three-gib-policy-generation-lifecycle)
+records the 18,220,421,120-byte whole-diagnostic owned peak; this is intrusive
+safety evidence, not a lifetime mean or a memory-saving comparison. The
 [collector correction](https://github.com/mattconzen/bazel-shared-graph-bench/commit/cc3e66a)
 passes ten focused tests. Its predecessor omitted the helper from a 336-file
 manifest and was intentionally interrupted after 37 checks / seven native events.
 The [preserved limited-case archive](https://github.com/mattconzen/bazel-shared-graph-bench/tree/22ed13d/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/three-gib-lifecycle-source-limited)
 verifies its content and records expected strict rejection, not a lifecycle pass
-or memory/correctness failure. The new run must independently finish and pass
-replay. The older 425-check mechanism replay still
+or memory/correctness failure. The older 425-check mechanism replay still
 passes but explicitly reports no guest OOM-counter coverage; it is not upgraded.
 The treemap policy collector now supports explicit 2/3 GiB geometry and exact
-legacy replay; live 3 GiB ownership capture remains required.
+legacy replay. A fresh matched native/mapped four-VM 3 GiB ownership capture is
+running with 512 MiB held pressure and the same reporting, heap-release and
+owned-file advice policies in both arms. Its results remain pending.
 The subsequent [raw owner-input tooling](https://github.com/mattconzen/bazel-shared-graph-bench/commit/ae0317e)
 preserves the before/after kernel page flags and observed userspace masks, so
 future physical replays can recompute ownership labels and investigate unknown
 frames. Thirty-six focused checks pass under both capture/render Python runtimes;
 the earlier terminal four-VM native capture replays with exactly unchanged
 attribution. No unknown frames have been newly assigned and the 5% guard remains
-unchanged. Live schema-2 ownership capture is still pending. New capacity,
-coverage, sharing/lifecycle and plan pins are required before independent collection. No independent
+unchanged. Live schema-2 ownership replay is still pending. Current-runtime
+capacity, useful coverage, sharing and lifecycle diagnostics have passed their
+declared scopes. Ownership capture and final plan/source pins remain required
+before independent collection. No independent
 seed has launched. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
