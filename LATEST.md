@@ -70,13 +70,31 @@ reads zero regular-file content bytes, using clone continuity for 53,974 saved
 observations; arena verification remains required. This completes a scan-path
 correction, not four-VM memory parity or the overall reduction objective.
 
+The subsequent four-VM staging-cache diagnostic, with the same explicit policy
+in all arms, passes 23 checks per arm. At first analysis, mapped owned charges
+are 6,283,304,960 bytes versus native's 5,731,282,944 bytes: approximately 9.6%
+higher. These are single-seed intrusive diagnostics, not a reconciled total-host
+lifetime result. L-02 parity remains open. Source `25c5664fcb` adds exact arena
+rebinding and a generation-checked intrusive full-access diagnostic; all four
+affected Java suites pass and its binary/image are pinned. Live Bazel DAX
+qualification is in progress; earlier VM results remain pinned to their actual
+older binary.
+
 A separate stock-Firecracker PMEM snapshot byte pilot passes 56 checks and 14
 captures, with 4 MiB shared selected residency versus 8 MiB for independent
 backing in two VMs. Its committed metadata replays. It covers held guest pressure
 and guest mapping/refault; Bazel integration, JVM GC and host backing-cache
-eviction/refault remain open. The GB-scale full-native profile is still running.
-Outside-memory accounting, the native memory-saving control, payload selection
-and all final qualification gates remain open.
+eviction/refault remain open. The GB-scale full-native Envoy executable and repeat
+builds have completed. Stock analysis-cache and complete-state discard controls
+also pass, producing the same verified executable digest. Their logical-heap
+results and the initial [payload audit](docs/shared-graph/payload-audit.md) do not
+establish total-host savings. Outside-memory accounting, payload selection and
+all final qualification gates remain open.
+
+The available host has 32 GiB RAM. The user confirmed that no larger host is
+available. Qualify local four/eight-VM configurations only where they fit without
+host pressure; leave 20+ VMs untested. A marginal-memory projection cannot
+qualify an unavailable scale, and no larger-host provisioning is authorized.
 
 ## L-01 — Identify the GB-scale opportunity and establish controls
 
@@ -97,7 +115,7 @@ and all final qualification gates remain open.
   processes, kernel memory and file/buffer cache at matching checkpoints.
 - [ ] Reconcile the complete host-memory ledger, including baseline backing and
   support memory outside VMM mappings. Quantify accounting error and unknowns.
-- [ ] Keep unmodified warmed native as the primary control and patched-off as
+- [x] Keep unmodified warmed native as the primary control and patched-off as
   the implementation control. Add a separate native memory-saving control using
   applicable stock cache-discard options. Record exact options and verify its
   outputs; it must not replace the primary warmed-native control.
