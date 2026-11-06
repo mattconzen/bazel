@@ -213,7 +213,14 @@ guest counters in its specialized DAX response, before useful work. The
 [preserved preflight bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/c0ad1db/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/three-gib-reference-and-preflight)
 retains the failed master/mapped case and completed native/off children.
 The metadata correction appends real guest counters while retaining unavailable
-DAX RSS; fresh mapped and optimized-native admission runs have separate pins.
+DAX RSS. The fresh mapped admission screen now completes all 42 operations and
+final baseline hashes, with zero guest/host OOM, swap or limit events. Its owned
+mean is 12,519,049,872 bytes over 209.806 useful seconds. Terminal page evidence
+records eight-way sharing: 250,904,576 mapping bytes backed by 31,363,072 unique
+file bytes and zero private copies. Raw replay and twenty-three altered-receipt
+controls pass. Optimized-native admission remains running with the same corrected
+source. These separate short screens do not qualify a complete-host or independent
+lifetime comparison.
 The treemap policy collector now supports explicit 2/3 GiB geometry and exact
 legacy replay; live 3 GiB ownership capture remains required. New capacity,
 coverage, sharing/lifecycle and plan pins are required before independent collection. No independent
