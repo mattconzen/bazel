@@ -25,6 +25,18 @@ assign the compilation/linking peak to individual processes. Prepared input
 cache charged outside the unit remains unresolved. PSS and these charges
 overlap and must not be added.
 
+A later warmed forced-codegen diagnostic separately analyzes the full executable,
+recompiles the version translation unit and performs the full static link. It
+reproduces the expected executable and retains 360 actual process/cgroup samples.
+Sampled concurrent PSS reaches 2,958,432,256 bytes for the server JVM,
+3,071,634,432 for the linker and 673,811,456 for the compiler at different times.
+At the largest linker sample, the overlapping unit charge is 13,573,373,952 bytes,
+with 9,487,806,464 file bytes, 3,897,819,136 anon and 185,442,304 kernel bytes.
+Do not add these sampled role maxima or sum them with cgroup charges. This
+[retained phase diagnostic](https://github.com/mattconzen/bazel-shared-graph-bench/tree/0dfd594/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/native-phase-and-lifecycle-failures)
+attributes the warmed recompile/link footprint; the cold whole-build compiler
+peak remains unobserved.
+
 The separate post-repeat heap diagnostic uses OpenJDK 27+35, G1, compact object
 headers, compressed references and eight-byte object alignment, all observed
 through `VM.flags -all`. HPROF SHA-256 is
@@ -130,7 +142,10 @@ uses less memory than mapped in this screen.
 
 The first four-VM ordinary screen completes the same workload with native mean
 owned charge 7,781,932,366 bytes and mapped PMEM plus advice 6,888,651,917 bytes,
-about 11.5% lower. Other controls are still running. End-of-trace native VMM PSS
+about 11.5% lower. The completed native-with-advice control averages
+5,948,387,105 bytes, so mapped plus advice is about 15.8% higher than that simpler
+control. Patched-off averages 7,836,656,249 bytes. All arms complete the same 42
+operations, and none spans 600 useful seconds. End-of-trace native VMM PSS
 is 5,998,228,480 bytes and the overlapping unit charge is 9,415,147,520 bytes;
 its file component is 3,833,614,336 bytes. Do not sum these quantities. Guest
 free RAM totals approximately 3.09 GB, which does not establish how many of

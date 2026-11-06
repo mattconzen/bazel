@@ -102,9 +102,38 @@ errors/recovery, GC and held pressure/refault. Sampled owned mean charges are
 4,491,426,356 bytes for warmed native, 2,533,904,261 with explicit per-owned-file
 cache advice, and 2,715,576,420 for mapped PMEM plus the same advice. The simpler
 native control is better in this short screen; no backend incremental saving is
-claimed. All arms complete the same work. These single-template runs are shorter
-than 600 useful seconds and lack complete-host accounting. Four-VM screening
-and real-VM generation renewal/rollback qualification are in progress.
+claimed. All arms complete the same work. In the completed four-VM screen,
+native's owned mean is 7,781,932,366 bytes, patched-off is 7,836,656,249,
+native with advice is 5,948,387,105 and mapped PMEM with advice is 6,888,651,917.
+The mapped combination is about 11.5% below ordinary native but 15.8% above
+native with the same advice. These single-template runs are shorter than 600
+useful seconds and lack complete-host accounting. Their
+[ordinary-screen evidence](https://github.com/mattconzen/bazel-shared-graph-bench/tree/e0d4ff1/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/ordinary-screen-evidence)
+includes raw work and source closure; no incremental backend saving is claimed.
+
+A separate native version-file recompile and full static link now has sampled
+process attribution. Server-JVM PSS reaches 2,958,432,256 bytes, linker PSS
+3,071,634,432 and compiler PSS 673,811,456 at different times. At the linker peak,
+the overlapping unit file charge is 9,487,806,464 bytes. These quantities must
+not be summed. The executable digest matches the earlier full build. Cold-build
+compiler peak coverage remains open; the
+[phase evidence](https://github.com/mattconzen/bazel-shared-graph-bench/tree/0dfd594/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/native-phase-and-lifecycle-failures)
+states that limitation and retains all three earlier failed lifecycle attempts.
+
+The subsequent lifecycle fixture passes 55 behavior/integrity checks and 335
+source-continuity checks across two independently prepared generations, with up
+to three live VMMs. It verifies native fallback after protection loss, output
+repair with preserved metadata, quarantined generation admission, rollback to
+current branch inputs, clean/rebuild with mapped siblings, private-budget
+fallback and retirement after all readers exit. The guest now retires and lazily
+detaches its own immutable bind views after full discard/reset, allowing native
+repository replacement. The diagnostic's owned peak is 13,246,414,848 bytes with
+zero swap, OOM or owned-limit reclaim; it is not a lifetime saving comparison.
+The [lifecycle bundle and replay tool](https://github.com/mattconzen/bazel-shared-graph-bench/tree/68b76c9/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/generation-lifecycle-evidence)
+preserve raw commands, exact sources and five rejected forged-receipt controls.
+New guest free-page reporting and G1 heap-release policies remain opt-in and are
+under separate native/mapped screening with unchanged nominal RAM and maximum
+heap. All final memory gates remain open.
 
 The available host has 32 GiB RAM. The user confirmed that no larger host is
 available. Qualify local four/eight-VM configurations only where they fit without
@@ -293,7 +322,7 @@ L-04 implementation if a selected payload contributes to the candidate.
 - [ ] Report time-weighted mean total resident host memory, preparation/restore
   and operational peaks, lifetime growth, marginal memory per added VM, physical
   sharing and absolute savings. Publish the full duration and sampling coverage.
-- [ ] Validate private-memory budgets, fallback on invariant/integrity failure,
+- [x] Validate private-memory budgets, fallback on invariant/integrity failure,
   failed-reconciliation admission, rollback, shutdown/reset/clean with live
   readers, generation renewal and safe retirement. Count these controls' memory.
 - [ ] Publish a pass/fail/inconclusive decision against the current objectives,
