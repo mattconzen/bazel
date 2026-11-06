@@ -28,9 +28,13 @@ single decoder cache holding all values would defeat individual release.
 
 The existing `RemoteConfiguredTargetValue.ConfiguredTargetValueCodec` is an
 auditable possible building block, not a transparent local mapped adapter. Its
-remote representation deliberately omits actions and transitive packages; the
-remote rule's action access is unsupported. Reusing it without a separate local
-execution/identity design would change the required behavior.
+codec serializes the configured target plus `TargetData`, and its remote value
+returns no transitive packages. The remote rule wrapper retains the configured
+target's action list and implements action lookup; the class-level comment
+about omitting actions is not a substitute for this implementation. Its deferred
+builder explicitly creates a new value on every retrieval because Skycache
+invalidation depends on reference identity. Reusing that codec therefore needs
+a separate local identity, action, clearing and memory-release design.
 
 Sources:
 [rule value](../../src/main/java/com/google/devtools/build/lib/skyframe/RuleConfiguredTargetValue.java),
