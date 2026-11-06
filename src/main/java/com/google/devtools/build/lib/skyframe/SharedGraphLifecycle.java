@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -57,6 +58,8 @@ final class SharedGraphLifecycle {
   private record Location(Path path, ObservationKind kind) {}
 
   private final String mode;
+  private final ReadonlyPathVerifier readonlyPathVerifier;
+  private ImmutableFiles immutableFiles;
   private State state = State.READY;
   private boolean eligible;
   private boolean preparationComplete;
@@ -73,11 +76,79 @@ final class SharedGraphLifecycle {
   private final Map<String, Map<String, Long>> fingerprintIo = new LinkedHashMap<>();
   private Map<String, Object> retentionAudit = Map.of();
 
+  @VisibleForTesting
+  interface ReadonlyPathVerifier {
+    java.nio.file.Path verify(String path) throws IOException;
+  }
+
+  private record ImmutableRoot(java.nio.file.Path declared, java.nio.file.Path canonical) {}
+
+  /** The controller also guarantees that the immutable backing generation cannot be replaced. */
+  private record ImmutableFiles(ImmutableList<ImmutableRoot> roots, ReadonlyPathVerifier verifier) {
+    static ImmutableFiles create(List<String> paths, ReadonlyPathVerifier verifier)
+        throws IOException {
+      var roots = ImmutableList.<ImmutableRoot>builder();
+      for (String name : paths) {
+        var declared = java.nio.file.Path.of(name);
+        if (!declared.isAbsolute()
+            || declared.getParent() == null
+            || !declared.normalize().equals(declared)) {
+          throw new IllegalArgumentException(
+              "Immutable roots must be normalized absolute non-root paths");
+        }
+        roots.add(new ImmutableRoot(declared, verifier.verify(name)));
+      }
+      return new ImmutableFiles(roots.build(), verifier);
+    }
+
+    void verifyRoots() throws IOException {
+      for (var root : roots) {
+        if (!verifier.verify(root.declared().toString()).equals(root.canonical())) {
+          throw new IOException("Immutable root changed canonical identity: " + root.declared());
+        }
+      }
+    }
+
+    boolean contains(Path path) throws IOException {
+      var candidate = java.nio.file.Path.of(path.getPathString());
+      if (roots.stream().noneMatch(root -> candidate.startsWith(root.declared()))) {
+        return false;
+      }
+      // A nested writable mount or an escaping symlink requires ordinary content checks. Aliases
+      // between two declared immutable roots are valid (external repositories commonly use these).
+      java.nio.file.Path canonical;
+      try {
+        canonical = verifier.verify(candidate.toString());
+      } catch (IOException unavailableProof) {
+        return false;
+      }
+      return roots.stream().anyMatch(root -> canonical.startsWith(root.canonical()));
+    }
+  }
+
+  private static java.nio.file.Path readonlyCanonicalPath(String name) throws IOException {
+    var canonical = java.nio.file.Path.of(name).toRealPath();
+    if (!java.nio.file.Files.getFileStore(canonical).isReadOnly()) {
+      throw new IOException("Immutable input requires a read-only filesystem: " + name);
+    }
+    return canonical;
+  }
+
   /** One scratch buffer per excluded verification pass, including recursive output trees. */
   private static final class FingerprintContext {
+    private final ImmutableFiles immutableFiles;
     private byte[] chunk;
     private long regularFiles;
     private long contentBytes;
+    private long immutableFilesSkipped;
+
+    FingerprintContext() {
+      this(new ImmutableFiles(ImmutableList.of(), SharedGraphLifecycle::readonlyCanonicalPath));
+    }
+
+    FingerprintContext(ImmutableFiles immutableFiles) {
+      this.immutableFiles = immutableFiles;
+    }
 
     byte[] buffer() {
       if (chunk == null) {
@@ -90,6 +161,7 @@ final class SharedGraphLifecycle {
       return Map.of(
           "regular_files", regularFiles,
           "content_bytes_read", contentBytes,
+          "immutable_files_content_skipped", immutableFilesSkipped,
           "buffer_bytes_allocated", chunk == null ? 0L : (long) chunk.length);
     }
   }
@@ -155,9 +227,16 @@ final class SharedGraphLifecycle {
   }
 
   SharedGraphLifecycle(String mode) {
+    this(mode, SharedGraphLifecycle::readonlyCanonicalPath);
+  }
+
+  @VisibleForTesting
+  SharedGraphLifecycle(String mode, ReadonlyPathVerifier readonlyPathVerifier) {
     checkState(
         ImmutableSet.of("off", "heap", "mapped").contains(mode), "Invalid shared graph mode");
     this.mode = mode;
+    this.readonlyPathVerifier = readonlyPathVerifier;
+    this.immutableFiles = new ImmutableFiles(ImmutableList.of(), readonlyPathVerifier);
   }
 
   boolean enabled() {
@@ -191,7 +270,17 @@ final class SharedGraphLifecycle {
 
   void prepare(InMemoryGraph graph, String directory, String revision, boolean verifyRetention)
       throws IOException, InterruptedException {
-    prepare(graph, directory, revision, verifyRetention, () -> {});
+    prepare(graph, directory, revision, verifyRetention, ImmutableList.of(), () -> {});
+  }
+
+  void prepare(
+      InMemoryGraph graph,
+      String directory,
+      String revision,
+      boolean verifyRetention,
+      List<String> immutableRoots)
+      throws IOException, InterruptedException {
+    prepare(graph, directory, revision, verifyRetention, immutableRoots, () -> {});
   }
 
   @VisibleForTesting
@@ -202,6 +291,17 @@ final class SharedGraphLifecycle {
       boolean verifyRetention,
       Runnable afterFreeze)
       throws IOException, InterruptedException {
+    prepare(graph, directory, revision, verifyRetention, ImmutableList.of(), afterFreeze);
+  }
+
+  private void prepare(
+      InMemoryGraph graph,
+      String directory,
+      String revision,
+      boolean verifyRetention,
+      List<String> immutableRoots,
+      Runnable afterFreeze)
+      throws IOException, InterruptedException {
     checkState(
         enabled() && graph instanceof LayeredInMemoryGraph, "Shared graph backend is disabled");
     checkState(
@@ -210,6 +310,7 @@ final class SharedGraphLifecycle {
     // Consume the successful-build admission token. A failed attempt may have observed a changing
     // filesystem, so require ordinary analysis again before a new preparation attempt.
     eligible = false;
+    immutableFiles = ImmutableFiles.create(immutableRoots, readonlyPathVerifier);
     // The controller must hold filesystem/workload exclusion continuously from that build through
     // snapshot publication. Re-read fingerprints to reject a filesystem changing during capture.
     phaseMetrics.clear();
@@ -291,8 +392,9 @@ final class SharedGraphLifecycle {
 
   private ImmutableList<Observation> capture(InMemoryGraph graph, String phase)
       throws IOException, InterruptedException {
-    var context = new FingerprintContext();
+    var context = new FingerprintContext(immutableFiles);
     try {
+      immutableFiles.verifyRoots();
       return capture(graph, context);
     } finally {
       fingerprintIo.put(phase, context.metrics());
@@ -406,6 +508,13 @@ final class SharedGraphLifecycle {
     } else if (stat.isFile() && !stat.isSpecialFile()) {
       digest.update((byte) 3);
       digest.update(Long.toString(stat.getSize()).getBytes(StandardCharsets.UTF_8));
+      if (context.immutableFiles.contains(path)) {
+        // The controller binds this read-only filesystem to the saved immutable image. Metadata
+        // checks remain, but scanning toolchain contents would only populate private guest cache.
+        digest.update((byte) 5);
+        context.immutableFilesSkipped++;
+        return digest.digest();
+      }
       try (var input = path.getInputStream()) {
         context.regularFiles++;
         byte[] chunk = context.buffer();
@@ -433,8 +542,9 @@ final class SharedGraphLifecycle {
   }
 
   ImmutableSet<SkyKey> changedKeys() throws IOException, InterruptedException {
-    var context = new FingerprintContext();
+    var context = new FingerprintContext(immutableFiles);
     try {
+      immutableFiles.verifyRoots();
       return changedKeys(context);
     } finally {
       fingerprintIo.put("reconcile_fingerprints", context.metrics());
@@ -496,6 +606,7 @@ final class SharedGraphLifecycle {
     observations = ImmutableList.of();
     mappedBytes = 0;
     eligible = false;
+    immutableFiles = new ImmutableFiles(ImmutableList.of(), readonlyPathVerifier);
   }
 
   void fallback() {
@@ -525,6 +636,22 @@ final class SharedGraphLifecycle {
             + " Private graph and cache bytes are not attributed. The controller separately"
             + " measures whole-VMM private resident bytes for its soft command-boundary budget.");
     status.put("fingerprints", observations.size());
+    status.put(
+        "immutable_roots",
+        immutableFiles.roots().stream()
+            .map(
+                root ->
+                    Map.of(
+                        "declared",
+                        root.declared().toString(),
+                        "canonical",
+                        root.canonical().toString()))
+            .toList());
+    status.put(
+        "immutable_roots_scope",
+        "Explicit controller-attested immutable backing on read-only filesystems; roots and files"
+            + " are rechecked. Mutable inputs retain full content fingerprints. This is not"
+            + " evidence of resident memory or physical sharing.");
     status.put("changed_nodes", changedNodes);
     status.put("changed_observations", changedObservations);
     status.put("reconciliation_ns", reconciliationNanos);

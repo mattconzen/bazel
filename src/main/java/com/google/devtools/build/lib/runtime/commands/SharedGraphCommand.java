@@ -30,6 +30,7 @@ import com.google.devtools.common.options.OptionsBase;
 import com.google.devtools.common.options.OptionsClass;
 import com.google.devtools.common.options.OptionsParsingResult;
 import java.io.IOException;
+import java.util.List;
 
 /** Internal experimental whole-VM lifecycle operations, serialized by the ordinary command lock. */
 @Command(
@@ -71,8 +72,22 @@ public final class SharedGraphCommand implements BlazeCommand {
         defaultValue = "false",
         documentationCategory = OptionDocumentationCategory.UNDOCUMENTED,
         effectTags = {OptionEffectTag.BAZEL_INTERNAL_CONFIGURATION},
-        help = "Diagnostic weak-reference audit of replaced storage after template GC; perturbs sharing.")
+        help =
+            "Diagnostic weak-reference audit of replaced storage after template GC; perturbs"
+                + " sharing.")
     public abstract boolean getVerifyRetention();
+
+    @Option(
+        name = "shared_graph_immutable_root",
+        defaultValue = "null",
+        allowMultiple = true,
+        documentationCategory = OptionDocumentationCategory.UNDOCUMENTED,
+        effectTags = {OptionEffectTag.BAZEL_INTERNAL_CONFIGURATION},
+        help =
+            "Preparation only: absolute input root backed by a controller-attested immutable image."
+                + " Requires a read-only filesystem at capture and restore; mutable inputs retain"
+                + " full content checks. Repeat for multiple roots.")
+    public abstract List<String> getImmutableRoots();
   }
 
   @Override
@@ -90,7 +105,8 @@ public final class SharedGraphCommand implements BlazeCommand {
               settings.getRevision(),
               settings.getGeneration(),
               env.getReporter(),
-              settings.getVerifyRetention());
+              settings.getVerifyRetention(),
+              settings.getImmutableRoots());
       env.getReporter()
           .getOutErr()
           .printOutLn(new com.google.gson.GsonBuilder().serializeNulls().create().toJson(status));

@@ -170,6 +170,135 @@ public final class SharedGraphLifecycleTest {
   }
 
   @Test
+  public void immutableInputsSkipContentWhileMutableInputsKeepExactChecks() throws Exception {
+    track(write("/immutable/toolchain", "x".repeat(140_000)));
+    var mutable = write("/work/input", "alpha");
+    var mutableKey = track(mutable);
+    var target = new SharedGraphLifecycle("heap", java.nio.file.Path::of);
+    target.noteCommandResult("build", true);
+    target.prepare(graph, "", "", false, ImmutableList.of("/immutable"));
+    var io = (java.util.Map<?, ?>) target.status().get("fingerprint_io");
+    var first = (java.util.Map<?, ?>) io.get("prepare_capture_first");
+    assertThat(first.get("content_bytes_read")).isEqualTo(5L);
+    assertThat(first.get("immutable_files_content_skipped")).isEqualTo(1L);
+    FileSystemUtils.writeContentAsLatin1(mutable, "bravo");
+    target.beginReconciliation((String) target.status().get("generation"));
+    assertThat(target.changedKeys()).containsExactly(mutableKey);
+    var reconciled =
+        (java.util.Map<?, ?>)
+            ((java.util.Map<?, ?>) target.status().get("fingerprint_io"))
+                .get("reconcile_fingerprints");
+    assertThat(reconciled.get("content_bytes_read")).isEqualTo(5L);
+    assertThat(reconciled.get("immutable_files_content_skipped")).isEqualTo(1L);
+  }
+
+  @Test
+  public void immutableRootRequiresReadonlyProofAndConsumesPreparationToken() throws Exception {
+    track(write("/immutable/toolchain", "x"));
+    var target =
+        new SharedGraphLifecycle(
+            "heap",
+            path -> {
+              throw new java.io.IOException("not read-only");
+            });
+    target.noteCommandResult("build", true);
+    assertThrows(
+        java.io.IOException.class,
+        () -> target.prepare(graph, "", "", false, ImmutableList.of("/immutable")));
+    assertThat(graph.baselineGeneration()).isNull();
+    assertThat(target.status().get("state")).isEqualTo("READY");
+    assertThrows(IllegalStateException.class, () -> target.prepare(graph, "", ""));
+  }
+
+  @Test
+  public void losingReadonlyProofBlocksRestoreAndFallbackClearsRoots() throws Exception {
+    track(write("/immutable/toolchain", "x"));
+    var readonly = new java.util.concurrent.atomic.AtomicBoolean(true);
+    var target =
+        new SharedGraphLifecycle(
+            "heap",
+            path -> {
+              if (!readonly.get()) {
+                throw new java.io.IOException("lost read-only mount");
+              }
+              return java.nio.file.Path.of(path);
+            });
+    target.noteCommandResult("build", true);
+    target.prepare(graph, "", "", false, ImmutableList.of("/immutable"));
+    readonly.set(false);
+    target.beginReconciliation((String) target.status().get("generation"));
+    assertThrows(java.io.IOException.class, target::changedKeys);
+    target.failReconciliation("lost read-only mount");
+    assertThat(target.commandRejection("build")).contains("PREPARED");
+    target.fallback();
+    assertThat(target.status().get("immutable_roots")).isEqualTo(ImmutableList.of());
+  }
+
+  @Test
+  public void escapedCanonicalPathAndSiblingPrefixStillRequireContentChecks() throws Exception {
+    var escaped = write("/immutable/escaped", "alpha");
+    var sibling = write("/immutable-other/file", "alpha");
+    var escapedKey = track(escaped);
+    var siblingKey = track(sibling);
+    var target =
+        new SharedGraphLifecycle(
+            "heap",
+            path ->
+                java.nio.file.Path.of(
+                    path.equals("/immutable/escaped") ? "/outside/escaped" : path));
+    target.noteCommandResult("build", true);
+    target.prepare(graph, "", "", false, ImmutableList.of("/immutable"));
+    FileSystemUtils.writeContentAsLatin1(escaped, "bravo");
+    FileSystemUtils.writeContentAsLatin1(sibling, "bravo");
+    target.beginReconciliation((String) target.status().get("generation"));
+    assertThat(target.changedKeys()).containsExactly(escapedKey, siblingKey);
+  }
+
+  @Test
+  public void aliasesBetweenImmutableRootsCanSkipContent() throws Exception {
+    track(write("/external/repository/toolchain", "x".repeat(140_000)));
+    var target =
+        new SharedGraphLifecycle(
+            "heap",
+            path ->
+                java.nio.file.Path.of(
+                    path.equals("/external/repository/toolchain")
+                        ? "/repository-cache/toolchain"
+                        : path));
+    target.noteCommandResult("build", true);
+    target.prepare(graph, "", "", false, ImmutableList.of("/external", "/repository-cache"));
+    var io = (java.util.Map<?, ?>) target.status().get("fingerprint_io");
+    var first = (java.util.Map<?, ?>) io.get("prepare_capture_first");
+    assertThat(first.get("content_bytes_read")).isEqualTo(0L);
+    assertThat(first.get("buffer_bytes_allocated")).isEqualTo(0L);
+    assertThat(first.get("immutable_files_content_skipped")).isEqualTo(1L);
+  }
+
+  @Test
+  public void nestedWritableFileFallsBackToFullContentVerification() throws Exception {
+    var file = write("/immutable/nested/file", "alpha");
+    var key = track(file);
+    var target =
+        new SharedGraphLifecycle(
+            "heap",
+            path -> {
+              if (path.equals("/immutable/nested/file")) {
+                throw new java.io.IOException("nested writable mount");
+              }
+              return java.nio.file.Path.of(path);
+            });
+    target.noteCommandResult("build", true);
+    target.prepare(graph, "", "", false, ImmutableList.of("/immutable"));
+    FileSystemUtils.writeContentAsLatin1(file, "bravo");
+    target.beginReconciliation((String) target.status().get("generation"));
+    assertThat(target.changedKeys()).containsExactly(key);
+    var io = (java.util.Map<?, ?>) target.status().get("fingerprint_io");
+    var first = (java.util.Map<?, ?>) io.get("prepare_capture_first");
+    assertThat(first.get("immutable_files_content_skipped")).isEqualTo(0L);
+    assertThat(first.get("content_bytes_read")).isEqualTo(5L);
+  }
+
+  @Test
   public void constructionFailureReopensAdmissionWithoutCommittedBaseline() throws Exception {
     track(write("/work/file", "x"));
     var target = new SharedGraphLifecycle("mapped");
