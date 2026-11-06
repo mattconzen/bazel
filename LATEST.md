@@ -131,6 +131,16 @@ repository replacement. The diagnostic's owned peak is 13,246,414,848 bytes with
 zero swap, OOM or owned-limit reclaim; it is not a lifetime saving comparison.
 The [lifecycle bundle and replay tool](https://github.com/mattconzen/bazel-shared-graph-bench/tree/68b76c9/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/generation-lifecycle-evidence)
 preserve raw commands, exact sources and five rejected forged-receipt controls.
+The follow-up candidate-policy lifecycle fixture now passes 59 behavior/integrity
+and 336 source-continuity checks with guest reporting and G1 heap release enabled.
+It repeats twelve native action/output comparisons, renewal, repair, fallback,
+rollback, clean/rebuild with live mapped siblings, a real private budget and
+immutable backing/retirement checks. Its sampled owned peak is 14,039,101,440
+bytes with zero swap, owned-limit reclaim or OOM. The
+[candidate-policy lifecycle bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/30c5d6a/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-generation-lifecycle)
+includes raw JVM/configuration evidence, a portable replay and nine rejected
+forged-receipt controls. This closes the policy-specific safety validation; it
+does not establish lifetime or total-host memory savings.
 Guest free-page reporting and G1 heap release remain opt-in, with unchanged
 nominal RAM and maximum heap. Their one-VM combined native screen completes the
 same 42 operations with mean owned charge 2,164,148,677 bytes. Actual terminal
