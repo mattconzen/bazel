@@ -285,7 +285,7 @@ freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
 collection. The sequential independent matrix is running. Its first four-VM
 native case completes 1,087 operations over 821.126545698 useful seconds, with
 source/work/JVM/guest-OOM/baseline and ordered-accounting replay passing. The
-[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/7ce8371/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
+[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/52f173b/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
 reports mean owned charge 12,274,525,568 bytes over the first 600 seconds. Guest/
 host OOM, limit events and swap are zero. This is one native seed, not a paired
 memory-saving or statistical decision. The patched-off cohort also completes
@@ -298,11 +298,16 @@ the first 600 seconds; metadata/ordered-accounting, safety and baseline replay
 pass. Terminal arena verification records 31,363,072 unique protected file bytes
 for four mappings, with zero selected private copies. These remain distinct
 owned-charge and selected-page observations, not a complete-host saving result.
-Three of 24 cohorts are complete; native with the same policies is active and
-21 cohorts remain. These are different arms of one block, not independent
-replicates of one treatment. The matched-policy control and remaining blocks
-must complete before assessing incremental backend value. No idle padding or
-unequal per-arm work is permitted.
+Native with the same reporting, heap-release and backing-advice policies now
+also completes 1,087 operations over 872.125707816 useful seconds. Its first-
+600-second mean owned charge is 5,702,391,776 bytes, with the same replay, safety
+and baseline checks passing. Mapped is 293,679,879 bytes / 5.15% higher in this
+block's matched-policy comparison; no incremental backend memory saving is shown
+by this point result. All four arms of the first four-VM block are complete;
+four of 24 cohorts have finished and the first eight-VM native case is active.
+These are different arms of one block, not independent replicates of one
+treatment. Remaining blocks and complete-host bounds are required for the final
+decision. No idle padding or unequal per-arm work is permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
