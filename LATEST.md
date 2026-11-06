@@ -311,6 +311,12 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   now preserves timed global/owned/root/zone counter reads in bounded compressed
   memfds. Five tests and a 21-sample real-host capture/replay pass. It is not
   integrated into lifetime comparisons and certifies no accounting error bound.
+  A separate [original-sampler adapter and smoke](https://github.com/mattconzen/bazel-shared-graph-bench/tree/a74a399/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/lifetime-accounting-adapter-smoke)
+  now passes eleven focused tests under both Python runtimes and a 22-sample
+  real-host capture/replay. It combines both observers on the original sampling
+  thread and exports ordered inputs after sampling stops. It is not yet wired
+  into the trial runner/auditor; source pinning and numerical error qualification
+  remain required before these inputs can support a complete-host claim.
 - [x] Keep unmodified warmed native as the primary control and patched-off as
   the implementation control. Add a separate native memory-saving control using
   applicable stock cache-discard options. Record exact options and verify its
