@@ -276,177 +276,54 @@ frames. Thirty-six focused checks pass under both capture/render Python runtimes
 the earlier terminal four-VM native capture replays with exactly unchanged
 attribution. No unknown frames have been newly assigned and the 5% guard remains
 unchanged. All thirty-two guest observations in the new 3 GiB diagnostic now
-contain schema-2 inputs and pass strict physical replay. Current-runtime
-capacity, useful coverage, sharing and lifecycle diagnostics have passed their
-declared scopes. Ownership replay is complete with its failing uncertainty guard
-preserved. The accounting observer is now integrated and
-[plan 02](https://github.com/mattconzen/bazel-shared-graph-bench/tree/9caeeaa/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02)
-freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
-collection. The sequential independent matrix is running. Its first four-VM
-native case completes 1,087 operations over 821.126545698 useful seconds, with
-source/work/JVM/guest-OOM/baseline and ordered-accounting replay passing. The
-[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/f5f956b/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
-reports mean owned charge 12,274,525,568 bytes over the first 600 seconds. Guest/
-host OOM, limit events and swap are zero. This is one native seed, not a paired
-memory-saving or statistical decision. The patched-off cohort also completes
-1,087 operations over 815.752846865 useful seconds, with the same metadata,
-ordered-accounting, guest/host safety and baseline checks passing. Its first-
-600-second mean owned charge is 12,381,578,944 bytes. The mapped cohort with
-reporting, heap release and backing advice also completes 1,087 operations over
-884.1202911 useful seconds. Its mean owned charge is 5,996,071,655 bytes over
-the first 600 seconds; metadata/ordered-accounting, safety and baseline replay
-pass. Terminal arena verification records 31,363,072 unique protected file bytes
-for four mappings, with zero selected private copies. These remain distinct
-owned-charge and selected-page observations, not a complete-host saving result.
-Native with the same reporting, heap-release and backing-advice policies now
-also completes 1,087 operations over 872.125707816 useful seconds. Its first-
-600-second mean owned charge is 5,702,391,776 bytes, with the same replay, safety
-and baseline checks passing. Mapped is 293,679,879 bytes / 5.15% higher in this
-block's matched-policy comparison; no incremental backend memory saving is shown
-by this point result. All four arms of the first four-VM block are complete;
-the first eight-VM native case also completes 1,087 operations over
-1,008.867547553 useful seconds. Its first-600-second mean owned charge is
-17,503,137,857 bytes, with source/work/JVM/guest-OOM/baseline and ordered-
-accounting replay passing. Recorded owned-cgroup OOM/limit events and swap are
-zero; minimum host MemAvailable at operation boundaries is 10,961,084,416 bytes.
-Eight-VM patched-off also completes 1,087 operations over 1,001.764785501 useful
-seconds, with the same replay, safety and baseline checks passing. Its first-
-600-second mean owned charge is 19,123,034,270 bytes and minimum recorded host
-MemAvailable at operation boundaries is 10,807,611,392 bytes. Its JVM argv records
-the off mode; this larger single-template point does not establish a causal or
-statistical memory regression. Eight-VM mapped with the selected policies also
-completes 1,087 operations over 1,106.422737979 useful seconds. Its first-
-600-second mean owned charge is 10,831,091,381 bytes, with metadata, ordered
-accounting, safety and baseline replay passing. Terminal selected-arena replay
-records 250,904,576 mapping bytes backed by 31,363,072 unique protected file
-bytes, zero selected private copies and eight-way multiplicity. This remains
-terminal selected-payload evidence, not natural full-access or whole-host proof.
-The eight-VM matched native-policy control also completes 1,087 operations over
-1,052.959103381 useful seconds. Its first-600-second mean owned charge is
-10,597,931,567 bytes, with metadata, ordered-accounting, safety and baseline
-replay passing. Recorded guest OOM, owned-cgroup OOM/limit events and swap are
-zero; minimum host MemAvailable at operation boundaries is 14,950,432,768 bytes.
-Mapped is 233,159,814 bytes / 2.20% higher in this block's eight-VM matched-policy
-comparison. All eight cohorts of the first block are complete at both counts;
-block 01's eight-VM patched-off control also completes 1,087 operations over
-987.781711213 useful seconds. Its first-600-second mean owned charge is
-19,369,637,764 bytes and whole-case owned peak is 21,223,661,568 bytes. Metadata,
-ordered-accounting, safety and final baseline checks pass, with zero recorded
-guest OOM, owned-cgroup OOM/limit events or swap. The generation retires and all
-356 source pins remain unchanged. Block 01's eight-VM mapped cohort also completes
-1,087 operations over 1,075.103168209 useful seconds, with first-600-second mean
-owned charge 11,058,239,977 bytes and whole-case owned peak 14,241,038,336 bytes.
-Metadata, ordered-accounting, guest/owned-cgroup safety and final baseline checks
-pass. Terminal selected-page replay again records 31,363,072 unique protected
-file bytes across eight mappings, with zero selected private copies. This remains
-a terminal full-access diagnostic, separate from the primary memory window.
-Block 01's eight-VM matched native-policy control also completes 1,087 operations
-over 1,069.9250031 useful seconds. Its first-600-second mean owned charge is
-10,449,207,442 bytes and whole-case owned peak is 14,151,135,232 bytes. Metadata,
-ordered-accounting, recorded guest/owned-cgroup safety and final baseline checks
-pass, with the generation retired and source pins unchanged. Mapped is
-609,032,535 bytes / 5.83% higher than this same-block control. Both completed
-eight-VM matched-policy pairs show mapped higher; these are descriptive points,
-not the predeclared three-block statistical decision. Block 01's ordinary
-eight-VM native baseline also completes 1,087 operations over 1,002.167376404
-useful seconds. Its first-600-second mean owned charge is 19,188,958,768 bytes
-and whole-case owned peak is 20,866,695,168 bytes. Metadata, ordered-accounting,
-recorded guest/owned-cgroup safety, baseline integrity and retirement checks
-pass. All four eight-VM arms are complete in each of the first two blocks.
-In block 01, mapped plus policies is 42.37% below ordinary native in owned scope;
-native with the same policies is 45.55% below ordinary native. These are point
-comparisons, not whole-host acceptance or proof of an incremental backend saving.
-Block 01's four-VM patched-off control also completes 1,087 operations over
-851.305281348 useful seconds. Its first-600-second mean owned charge is
-11,716,276,084 bytes and whole-case owned peak is 14,026,526,720 bytes. Metadata,
-ordered-accounting, recorded guest/owned-cgroup safety, baseline integrity and
-retirement checks pass; all 356 source pins remain unchanged. Block 01's four-VM
-mapped cohort also completes 1,087 operations over 907.475333585 useful seconds.
-Its first-600-second mean owned charge is 5,995,387,320 bytes and whole-case owned
-peak is 10,531,528,704 bytes. Metadata, ordered-accounting, recorded guest/
-owned-cgroup safety, baseline integrity and retirement checks pass. Terminal
-selected-page replay records 125,648,896 mapping bytes backed by 31,412,224 unique
-protected file bytes, zero selected private copies and four-way multiplicity.
-This is the independently warmed template's observed terminal set; whole-window
-full access and complete-host savings remain separate. The matched four-VM
-native-policy control also completes 1,087 operations over 881.229373635 useful
-seconds. Its first-600-second mean owned charge is 5,633,059,126 bytes and
-whole-case owned peak is 10,451,148,800 bytes. Metadata, ordered-accounting,
-recorded guest/owned-cgroup safety, baseline integrity and retirement checks
-pass, with source pins unchanged. Mapped is 362,328,194 bytes / 6.43% higher
-than this same-block control. All four completed matched-policy pairs across
-four/eight VMs show mapped higher as point observations; the third independent
-block and complete-host bounds are still required for the declared decision.
-Block 01's ordinary four-VM native baseline also completes 1,087 operations over
-814.127782425 useful seconds. Its first-600-second mean owned charge is
-12,281,506,553 bytes and whole-case owned peak is 14,345,162,752 bytes. Metadata,
-ordered-accounting, recorded guest/owned-cgroup safety, baseline integrity and
-retirement checks pass, with source pins unchanged. All four arms at both VM
-counts are now complete in each of the first two blocks. In block 01's four-VM
-comparison, mapped plus policies is 51.18% below ordinary native in owned scope;
-native with the same policies is 54.13% below ordinary native. These are point
-comparisons, with mapped still higher than the matched-policy native control.
-Block 02's four-VM mapped cohort also completes 1,087 operations over
-880.637778644 useful seconds. Its first-600-second mean owned charge is
-6,105,468,868 bytes and whole-case owned peak is 10,430,001,152 bytes. Metadata,
-ordered-accounting, recorded guest/owned-cgroup safety, baseline integrity and
-retirement checks pass, with source pins unchanged. Terminal selected-page
-replay records 31,363,072 unique protected file bytes across four mappings,
-zero selected private copies and four-way multiplicity. All three four-VM
-mapped seeds are collected. The third four-VM native-policy control also
-completes 1,087 operations over 869.35527009 useful seconds. Its first-600-second
-mean owned charge is 5,636,501,254 bytes and whole-case owned peak is
-10,546,012,160 bytes. Metadata, ordered-accounting, recorded guest/owned-cgroup
-safety, baseline integrity and retirement checks pass, with source pins unchanged.
-Mapped is 468,967,613 bytes / 8.32% higher than this same-block control. All three
-four-VM matched-policy point pairs show mapped higher: 5.15%, 6.43% and 8.32% in
-block order. Statistical reporting will follow matrix completion and preserve
-unresolved complete-host bounds. The third ordinary four-VM native baseline also
-completes 1,087 operations over 818.64251884 useful seconds. Its first-600-second
-mean owned charge is 12,477,521,976 bytes and whole-case owned peak is
-14,575,190,016 bytes. Metadata, ordered-accounting, recorded guest/owned-cgroup
-safety, baseline integrity and retirement checks pass, with source pins unchanged.
-In this block, mapped plus policies is 51.07% below ordinary native in owned scope;
-native with the same policies is 54.83% below ordinary native. These point
-comparisons retain the higher mapped mean versus matched-policy native and do
-not qualify whole-host savings. The third four-VM patched-off control also
-completes 1,087 operations over 834.561693418 useful seconds. Its first-600-second
-mean owned charge is 12,150,192,685 bytes and whole-case owned peak is
-14,347,350,016 bytes. Metadata, ordered-accounting, recorded guest/owned-cgroup
-safety, baseline integrity and retirement checks pass, with source pins unchanged.
-All twelve four-VM cohorts have completed collection and metadata replay: three
-independently warmed templates per arm. Bulk negative controls, final aggregation
-and portable raw-evidence archival remain pending. The third eight-VM mapped
-cohort also completes 1,087 operations over 1,088.367205175 useful seconds. Its
-first-600-second mean owned charge is 11,133,014,281 bytes and whole-case owned
-peak is 15,035,379,712 bytes. Metadata, ordered-accounting, recorded guest/
-owned-cgroup safety, baseline integrity and retirement checks pass, with source
-pins unchanged. Terminal selected-page replay records 31,363,072 unique protected
-file bytes across eight mappings, zero selected private copies and eight-way
-multiplicity. All six mapped seeds are collected and replayed, three at each
-count; whole-window natural full access remains distinct from these terminal
-proofs. The third eight-VM native-policy control also completes 1,087 operations
-over 1,047.523331262 useful seconds. Its first-600-second mean owned charge is
-10,474,742,880 bytes and whole-case owned peak is 13,718,573,056 bytes. Metadata,
-ordered-accounting, recorded guest/owned-cgroup safety, baseline integrity and
-retirement checks pass, with source pins unchanged. Mapped is 658,271,401 bytes /
-6.28% higher than this same-block control. All six matched-policy pairs across
-both counts are collected, with higher mapped point means in each. Final
-confidence intervals and decisions await the last controls and bulk validation,
-with complete-host bounds remaining explicit. The third ordinary eight-VM native
-baseline also completes 1,087 operations over 980.647409372 useful seconds. Its
-first-600-second mean owned charge is 18,781,768,406 bytes and whole-case owned
-peak is 20,250,480,640 bytes. Metadata, ordered-accounting, recorded guest/
-owned-cgroup safety, baseline integrity and retirement checks pass, with source
-pins unchanged. In this block, mapped plus policies is 40.72% below ordinary
-native in owned scope; native with the same policies is 44.23% below ordinary
-native. These point comparisons retain the higher mapped mean versus matched-
-policy native and do not qualify whole-host savings. All six ordinary-native
-seeds are collected and replayed, three per count. Twenty-three of 24 cohorts
-have finished and block 02 continues with its final eight-VM patched-off control.
-Remaining validation and complete-host bounds are
-required for the final decision. No idle padding or unequal per-arm work is
-permitted.
+contain schema-2 inputs and pass strict physical replay. Current-runtime capacity, useful coverage, sharing and lifecycle diagnostics
+have passed their declared scopes. Ownership replay preserves its failing
+uncertainty guard. The integrated accounting observer records ordered inputs;
+numerical accounting-error qualification remains open.
+
+[Immutable plan 02](https://github.com/mattconzen/bazel-shared-graph-bench/tree/9caeeaa/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02)
+now completes all **24 cohorts**: three fresh template blocks, four arms and
+four/eight VMs. The matrix exits 0 with all 356 source hashes and the separately
+pinned protocol unchanged. Every cohort completes the same 1,087 operations and
+at least 600 useful seconds. Full replay verifies 24 distinct template memory
+hashes, matched resources/policies, source/image/reference identities, final
+baseline hashes, retired generations and ordered accounting streams. Recorded
+guest OOM, owned-cgroup OOM/limit events and swap are zero; global host-event
+counter auditing remains separate and pending.
+
+The [completed-matrix report and exact measured sources](https://github.com/mattconzen/bazel-shared-graph-bench/tree/0d0d03d/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02)
+preserve each seed's bytes, coverage, stage peaks, identities and arithmetic.
+The mean owned charge over each cohort's first 600 useful seconds, averaged over
+three block means, is shown below in decimal GB:
+
+| Arm | Four VMs | Eight VMs |
+| --- | ---: | ---: |
+| Ordinary warmed native | 12.345 | 18.491 |
+| Patched-off | 12.083 | 19.132 |
+| Mapped + reclamation policies | 6.032 | 11.007 |
+| Native + same policies | 5.657 | 10.507 |
+
+Both policy combinations pass the predeclared 25%-reduction arithmetic against
+ordinary native in **owned scope** at both counts. Mapped's ratio of arm means
+versus native with the same policies is 1.0662844012 at four VMs and
+1.0476007034 at eight VMs. All six paired point means are higher for mapped.
+At four VMs, parity fails under the predeclared paired Student-t rule: the
+mapped-minus-native-policy difference bounds are +19,754,934 to +730,228,857
+bytes. At eight VMs the bounds are -435,044,615 to +1,435,353,782 bytes, leaving
+parity inconclusive. These use the planned three-block critical value 6.966;
+they describe block variability under the declared assumptions and do not bound
+accounting, continuous sampling or outside ownership. No incremental backend
+memory benefit is demonstrated.
+
+The report's overall decision is **inconclusive complete-host accounting**.
+Every complete-host gate remains inconclusive, and no 25% total-host saving is
+claimed. The source bundle preserves all 356 measured files plus the protocol;
+fresh extraction verifies all 357 hashes. Bulk altered-receipt controls are
+running on copies. Global host-event checks, lifetime-growth supplements,
+full raw-cohort archival and fresh portable cohort replay remain pending.
+All five overall LATEST completion gates remain open. The larger full-executable
+VM comparison and twenty-plus VMs remain unqualified; the ten-minute lifetime
+is a memory observation window, with no speed or execution-time objective.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
 retains successful screens, failed attempts, scope limits and four portable
 replays with fourteen rejected forged-receipt controls.
