@@ -139,6 +139,15 @@ their own equality, identity, mutation and lifetime design. Current evidence
 supports completing the fixed-work independent comparison and improving these
 larger owner measurements before adding another payload family.
 
+A separate [host huge page counter review](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-thp-audit)
+rehashes eight retained 2 GiB-guest captures and checks all 32 VMM observations
+against their raw `smaps`. All host `AnonHugePages` counters are zero at those
+checkpoints. This does not implicate resident anonymous THP there or justify
+selecting a THP policy change. It does not exclude unobserved transitions,
+file-backed large pages, guest THP or a different result in the current 3 GiB
+configuration. The query and both Python runtime replays are preserved; no live
+VM inspection or policy change is introduced into the frozen comparison.
+
 ## Stock cache-discard controls
 
 The warmed control uses `--noallow_analysis_cache_discard`. Separate native
