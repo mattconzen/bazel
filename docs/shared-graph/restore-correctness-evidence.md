@@ -25,8 +25,9 @@ passes 407 checks, thirteen fresh-native comparisons, retained-image verificatio
 and fourteen altered-receipt rejection controls. All 338 measured sources remain
 unchanged; both generations retire after every reader exits. Observed guest OOM,
 owned swap and owned-limit reclaim are zero. Its live-log inspection is recorded
-as an extra intrusive observer. Raw-case bundling/portable replay is pending
-completion of the separate backing fixture and remains an L-05 deliverable.
+as an extra intrusive observer. The [raw-case bundle and portable replay](https://github.com/mattconzen/bazel-shared-graph-bench/tree/10f87d8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/raw-evidence)
+now pass for this source, with original-image verification explicitly excluded
+from portable metadata replay. Unperturbed lifetime qualification remains open.
 
 These are the enumerated regression scenarios, with analysis-level and VM-level
 coverage stated separately. They do not establish correctness for every possible

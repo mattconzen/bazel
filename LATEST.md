@@ -371,7 +371,8 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   Thirty-four focused producer/auditor tests pass per Python runtime.
   Cold compilation has no execution-time or sample-count cutoff; RAM, swap,
   disk headroom and observation bytes bound the run. The actual larger guest
-  is not yet admitted.
+  is not yet admitted. Its first actual run is now preparing a private enlarged
+  disk and booting on this host, after the candidate VM fixtures stopped.
   Do not treat the current 768 MiB-heap case as representative by assumption.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
@@ -455,9 +456,13 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   `42648123a796f3d681738f9d338f3f497c392417c6ecd2e98d199355fffb03c9`).
   Candidate lifecycle validation passes, including an opt-in missing-output
   repair with withheld continuity proof and live mapped siblings. Full image
-  verification and all fourteen altered-receipt controls pass; shared/private
-  backing validation is now running.
-  Physical comparisons remain pending; older measurements retain
+  verification and all fourteen altered-receipt controls pass. Shared/private
+  backing validation also passes 431 checks and fourteen captures, with eighteen
+  rejected altered receipts. Shared selected residency remains 31,363,072 bytes
+  versus 62,726,144 for independent backing through GC, pressure, host/guest
+  refault and revert. [Both raw cases and portable replay](https://github.com/mattconzen/bazel-shared-graph-bench/tree/10f87d8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/raw-evidence)
+  verify 1,742 entries and all 32 altered controls. Whole-VM physical comparisons
+  remain pending; older measurements retain
   their previous source pins. The estimate is not counted as physical savings.
 - [x] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
