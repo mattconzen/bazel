@@ -75,3 +75,17 @@ terminal observer peaks remain visible. Intrusive physical attribution is a
 separate measurement. No result or memory acceptance is assigned by preparing
 this experiment, and the primary warmed-native/patched-off L-05 controls remain
 required.
+
+
+## Completed resident-memory result
+
+All nine cases and 240 altered-receipt controls complete. Portable raw evidence
+reproduces the final report byte for byte under Python 3.14/3.12. At the first
+three-block look, new mapped averages 6,014,473,686 owned bytes versus
+5,689,934,944 for native with identical policies, a 5.70% excess. The paired
+new-minus-native bounds are [319,046,260, 330,031,224] bytes: owned parity fails.
+New-minus-old bounds span zero, leaving that change inconclusive. Complete-host
+qualification remains inconclusive because accounting/sampling bounds are
+unknown. Reachability correctness and fewer retained wrappers do not establish
+resident memory savings. The [final bundle and report](https://github.com/mattconzen/bazel-shared-graph-bench/tree/ba9ebc7/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/comparison-block-02)
+preserve the declared decision and each case; no speed target is introduced.

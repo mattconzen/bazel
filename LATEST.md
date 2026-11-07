@@ -355,6 +355,32 @@ available. Qualify local four/eight-VM configurations only where they fit withou
 host pressure; leave 20+ VMs untested. A marginal-memory projection cannot
 qualify an unavailable scale, and no larger-host provisioning is authorized.
 
+## Completed comparison and larger ownership checkpoint
+
+The [final nine-case mapped-view comparison](https://github.com/mattconzen/bazel-shared-graph-bench/tree/ba9ebc7/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/comparison-block-02)
+now completes three independent blocks, 1,087 operations and at least 600 useful
+seconds per case. All 240 altered-receipt controls pass. Fresh portable evidence
+reproduces the final report byte for byte under Python 3.14 and 3.12. At the first
+predeclared look, mean owned charges are 6,014,473,686 bytes new mapped versus
+5,689,934,944 native with identical policies: **5.70% higher**. Paired difference
+bounds are [319,046,260, 330,031,224] bytes, failing owned parity. New versus old
+mapped remains inconclusive. Complete-host accounting remains inconclusive;
+these overlapping owned charges do not establish whole-host savings or disprove
+the broader sharing hypothesis. No guest OOM, owned-limit or swap event occurs.
+
+After the frozen matrix and controls terminated, the actual **8 GiB native
+[ownership diagnostic](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d4ac49f/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/large-native-owner-01)** completed using a private admitted-root clone. Its five
+captures preserve actual saved-region geometry, raw guest owners/host PTEs,
+512 MiB held pressure and complete post-reader baseline/source-root hashes.
+Independent portable replay passes under both Python runtimes, including fresh
+state decoding. The fifteen PNGs are preserved, but the unchanged 5% unknown
+owner guard fails: 55.33% after restore and 6.55–7.91% thereafter. Initial probe
+PSS growth is 310,390,784 bytes. This intrusive, warmed, single-VM diagnostic
+qualifies neither cross-VM sharing nor lifetime savings. The region-aware tools
+are now integrated into the benchmark branch; historical frozen inputs remain
+preserved. Larger matched cohorts, payload attribution, complete-host accounting
+and all five overall acceptance gates remain open. No speed goals were added.
+
 ## L-01 — Identify the GB-scale opportunity and establish controls
 
 **Related obligations:** SG-001, SG-002, SG-004, SG-009.
@@ -430,8 +456,8 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   collect stopped-host mappings per region, counting merged VMAs once. All 115
   focused tests pass under Python 3.14/3.12, including 8 GiB-sized owner vectors,
   altered-input rejection and a real stopped-process sparse-mapping smoke.
-  The changes remain on an isolated branch to preserve the live comparison's
-  frozen source closure. A process mapping is not a VM capture; actual saved-state
+  These components were developed on an isolated branch to preserve the then-live
+  comparison's frozen source closure and are now integrated after its completion. A process mapping is not a VM capture; actual saved-state
   provenance, producer/PNG integration and larger physical attribution stay open.
   A separate [larger-native producer and PNG replay tool](https://github.com/mattconzen/bazel-shared-graph-bench/tree/80ecd2c/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/LARGE-NATIVE-OWNER-PROBE.md)
   now implements that integration on the isolated branch: a private completed
@@ -441,9 +467,9 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   plotting-environment suite passes 201 tests; a final added cache-path control
   and all nine transcript checks pass under both runtimes. The native cold-clean
   path remains separately tested. The adapter preserves the retained 3 GiB state
-  hash, with a small portable state proof. Live 8 GiB collection and its replay
-  remain pending until the frozen matrix and final controls finish; no larger
-  physical-owner or savings gate is passed by code/tests alone.
+  hash, with a small portable state proof. Actual collection and portable replay
+  have since completed, as recorded above; ownership uncertainty still fails
+  the unchanged guard. No savings qualification follows.
 - [ ] Reconcile the complete host-memory ledger, including baseline backing and
   support memory outside VMM mappings. Quantify accounting error and unknowns.
   The [host accounting source audit](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5adb0d3/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-accounting-source-audit)
@@ -562,10 +588,10 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   [second independent block](https://github.com/mattconzen/bazel-shared-graph-bench/tree/7e74b2a/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/comparison-block-01)
   also completes all three arms and producer checks, with independent raw replay.
   Its fresh extraction verifies another 40,698 files and reproduces all three
-  audits byte for byte under both runtimes. Six of nine cases are collected;
-  the third block is running and final altered-receipt replays remain pending.
-  Two blocks do not reach the first predeclared decision look: no parity,
-  net-saving or complete-host gate is passed by these data.
+  audits byte for byte under both runtimes. The final block and all 240 altered
+  controls now complete. The first predeclared decision fails new-mapped owned
+  parity against optimized native, with complete-host accounting inconclusive;
+  see the completed comparison checkpoint above.
 - [x] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
