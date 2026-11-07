@@ -368,7 +368,7 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   verification and sampled process-role attribution. Its provenance now pins
   the boot kernel, Firecracker and observed JVM/compiler/linker executables;
   a bounded raw-stream auditor and altered-receipt controls are implemented.
-  Thirty-seven focused producer/auditor tests pass per Python runtime.
+  Forty focused producer/auditor/image tests pass per Python runtime.
   Cold compilation has no execution-time or sample-count cutoff; RAM, swap,
   disk headroom and observation bytes bound the run. The actual larger guest
   is not yet admitted. Its first actual run boots and completes clean/analysis,
@@ -378,7 +378,11 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   [failure bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/large-native-failures)
   preserves original raw evidence and diagnostic recovery of a separate disk copy.
   The corrected producer fsyncs diagnostics and attempts clean export on failure.
-  A fresh attempt 02 runs the same resources and original source image.
+  Attempt 02 captures the exact failure: the libmaxminddb config action cannot
+  find `python3` under its standard PATH. Release/export both succeed. This is a
+  guest fixture error, with no memory-capacity conclusion. A separate derived
+  image adds only a standard-path alias to the existing interpreter; admission
+  now checks Python under the action PATH before starting the full build.
   Do not treat the current 768 MiB-heap case as representative by assumption.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
