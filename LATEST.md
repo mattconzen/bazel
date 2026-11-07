@@ -383,6 +383,9 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   guest fixture error, with no memory-capacity conclusion. A separate derived
   image adds only a standard-path alias to the existing interpreter; admission
   now checks Python under the action PATH before starting the full build.
+  That derived image is prepared with SHA-256
+  `2468581b6492e2c84c9ac44aaa8dda2ae03d004e35dc4c0498565296997df817`;
+  fresh attempt 03 runs the unchanged resources, inputs and golden executable.
   Do not treat the current 768 MiB-heap case as representative by assumption.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
