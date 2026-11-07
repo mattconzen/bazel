@@ -56,3 +56,22 @@ deleting graph membership and retirement must preserve their existing behavior.
   private growth, with no speed or execution-time gate.
 - Keep L-02 parity, complete-host accounting and the overall 25% objective open
   until their own criteria pass. A lower shallow histogram is insufficient.
+
+## Matched resident-memory comparison
+
+The benchmark fork's `MAPPED-VIEW-COMPARISON.md` and
+`mapped_view_comparison.py` define a separate four-VM old/new mapped comparison
+with an identically optimized unmodified-native control. Three fresh template
+blocks rotate all three arm positions, execute the full existing 1,087-operation
+trace with 512 MiB held pressure per guest, and retain at least 600 useful
+seconds. Both image configurations must match except for the patched binary;
+reference catalogs, sources, exact trace and resources are frozen before runs.
+The collector runs sequentially after the larger native fixture stops.
+
+The reporter requires raw per-case replay and immutable baselines, rejects
+reused template hashes, and keeps paired owned-charge arithmetic separate from
+the unresolved complete-host gate. Preparation, initialization, useful and
+terminal observer peaks remain visible. Intrusive physical attribution is a
+separate measurement. No result or memory acceptance is assigned by preparing
+this experiment, and the primary warmed-native/patched-off L-05 controls remain
+required.

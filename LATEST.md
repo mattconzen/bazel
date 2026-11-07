@@ -477,6 +477,18 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   verify 1,742 entries and all 32 altered controls. Whole-VM physical comparisons
   remain pending; older measurements retain
   their previous source pins. The estimate is not counted as physical savings.
+  A [predeclared matched comparison](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/comparison-predeclared)
+  now freezes 357 source files and nine four-VM cases: old mapped, new mapped and
+  native with identical policies, three fresh template blocks with all three arm
+  positions balanced. Plan SHA-256 is
+  `78e3156fa7141e8ac933f6e44e7a208af7f342700b778f9b5cd21a0c31fa1086`.
+  Twenty-one focused runner/reporter tests pass under both Python runtimes.
+  Collection remains pending until the larger native fixture stops. Each case
+  uses the same full 1,087-operation trace, 512 MiB held pressure per guest and
+  at least 600 useful seconds; no execution-time cutoff applies. The reporter
+  preserves preparation/useful/observer peaks and keeps sampled owned-scope
+  arithmetic separate from the unresolved complete-host gate. Intrusive physical
+  attribution and L-05 primary controls remain required.
 - [x] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
