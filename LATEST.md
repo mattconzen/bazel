@@ -497,6 +497,15 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   preserves preparation/useful/observer peaks and keeps sampled owned-scope
   arithmetic separate from the unresolved complete-host gate. Intrusive physical
   attribution and L-05 primary controls remain required.
+  A [guarded handoff](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/handoff-registration-01)
+  is now waiting on the exact native attempt 03 unit invocation, controller PID
+  and start ticks. No new VM starts until that controller exits successfully,
+  native raw replay and all eleven altered-receipt controls pass. It then runs
+  the nine frozen cohorts sequentially, the comparison replay and per-case
+  altered controls. Nineteen focused handoff tests pass per Python runtime.
+  Transient observation failure triggers a re-poll; changed identities or a
+  failed prerequisite stop further launches. Waiting/controller memory remains
+  an explicit outside support cost; the complete-host gate remains unresolved.
 - [x] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
