@@ -285,7 +285,7 @@ freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
 collection. The sequential independent matrix is running. Its first four-VM
 native case completes 1,087 operations over 821.126545698 useful seconds, with
 source/work/JVM/guest-OOM/baseline and ordered-accounting replay passing. The
-[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/1a363f6/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
+[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/a231dcb/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
 reports mean owned charge 12,274,525,568 bytes over the first 600 seconds. Guest/
 host OOM, limit events and swap are zero. This is one native seed, not a paired
 memory-saving or statistical decision. The patched-off cohort also completes
@@ -416,8 +416,17 @@ mean owned charge is 12,150,192,685 bytes and whole-case owned peak is
 safety, baseline integrity and retirement checks pass, with source pins unchanged.
 All twelve four-VM cohorts have completed collection and metadata replay: three
 independently warmed templates per arm. Bulk negative controls, final aggregation
-and portable raw-evidence archival remain pending. Twenty of 24 cohorts have
-finished and block 02 continues with eight-VM mapped. Remaining controls and complete-host bounds are
+and portable raw-evidence archival remain pending. The third eight-VM mapped
+cohort also completes 1,087 operations over 1,088.367205175 useful seconds. Its
+first-600-second mean owned charge is 11,133,014,281 bytes and whole-case owned
+peak is 15,035,379,712 bytes. Metadata, ordered-accounting, recorded guest/
+owned-cgroup safety, baseline integrity and retirement checks pass, with source
+pins unchanged. Terminal selected-page replay records 31,363,072 unique protected
+file bytes across eight mappings, zero selected private copies and eight-way
+multiplicity. All six mapped seeds are collected and replayed, three at each
+count; whole-window natural full access remains distinct from these terminal
+proofs. Twenty-one of 24 cohorts have finished and block 02 continues with
+eight-VM native-policy. Remaining controls and complete-host bounds are
 required for the final decision. No idle padding or unequal per-arm work is
 permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
