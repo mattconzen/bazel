@@ -362,8 +362,12 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   fork's `LARGE-ENVOY-PROTOCOL.md` and completed 4 GiB-heap host diagnostic.
 - [ ] Admit any larger full-executable VM comparison using enough memory for
   native to complete, then match resources across arms. No larger guest image or
-  four-VM full-build comparison is yet qualified. Do not treat the current
-  768 MiB-heap case as representative by assumption.
+  four-VM full-build comparison is yet qualified. A separate native admission
+  producer now implements the proposed 8 GiB guest / 4 GiB heap / four vCPUs /
+  two slots, full executable rebuild after private native clean, exact BEP/digest
+  verification and sampled process-role attribution. Seventeen focused tests
+  pass per Python runtime; the actual larger guest is not yet admitted.
+  Do not treat the current 768 MiB-heap case as representative by assumption.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
   processes, kernel memory and file/buffer cache at matching checkpoints.
@@ -442,8 +446,11 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   `d7e4fb44e782fdfdfb1ee1afbdbfe624bc58a66b50adc880c932ab360645f4b1`
   and independently derived image SHA-256 is
   `b127bbbcf6542bad6defad86aad8d70fc9f707e03640f8a720d50745d0de854a`.
-  Fresh native references are being collected for that image. Candidate VM
-  validation and physical comparisons remain pending; older measurements retain
+  All seven fresh native references pass for that image (catalog SHA-256
+  `42648123a796f3d681738f9d338f3f497c392417c6ecd2e98d199355fffb03c9`).
+  Candidate lifecycle/backing validation is running, including an opt-in missing-
+  output repair with withheld continuity proof and live mapped siblings.
+  Physical comparisons remain pending; older measurements retain
   their previous source pins. The estimate is not counted as physical savings.
 - [ ] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
