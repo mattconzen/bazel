@@ -398,6 +398,16 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
   processes, kernel memory and file/buffer cache at matching checkpoints.
+  A separate read-only snapshot geometry tool is now implemented in the required
+  [`mattconzen/firecracker` fork](https://github.com/mattconzen/firecracker/tree/shared-graph/ram-region-diagnostics),
+  source `33f934cafdbd2613fabe020258e774403adf7ab9`. It exposes saved guest regions,
+  packed memory-file offsets and plugged-slot state without changing the VMM.
+  Seven editor tests pass, including synthetic 8 GiB/MMIO-hole geometry. Actual
+  retained 3 GiB state decoding preserves its hash; a corrupted copy fails CRC64
+  validation. The [source and validation receipt](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/snapshot-memory-geometry)
+  retain the offline tool's scope. This is not a live 8 GiB owner capture or
+  physical-memory result. Existing stock-VMM admission and frozen comparison
+  identities remain unchanged; larger physical attribution remains open.
 - [ ] Reconcile the complete host-memory ledger, including baseline backing and
   support memory outside VMM mappings. Quantify accounting error and unknowns.
   The [host accounting source audit](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5adb0d3/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-accounting-source-audit)
