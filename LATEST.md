@@ -285,7 +285,7 @@ freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
 collection. The sequential independent matrix is running. Its first four-VM
 native case completes 1,087 operations over 821.126545698 useful seconds, with
 source/work/JVM/guest-OOM/baseline and ordered-accounting replay passing. The
-[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/a231dcb/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
+[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/f8bdb6e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
 reports mean owned charge 12,274,525,568 bytes over the first 600 seconds. Guest/
 host OOM, limit events and swap are zero. This is one native seed, not a paired
 memory-saving or statistical decision. The patched-off cohort also completes
@@ -425,8 +425,17 @@ pins unchanged. Terminal selected-page replay records 31,363,072 unique protecte
 file bytes across eight mappings, zero selected private copies and eight-way
 multiplicity. All six mapped seeds are collected and replayed, three at each
 count; whole-window natural full access remains distinct from these terminal
-proofs. Twenty-one of 24 cohorts have finished and block 02 continues with
-eight-VM native-policy. Remaining controls and complete-host bounds are
+proofs. The third eight-VM native-policy control also completes 1,087 operations
+over 1,047.523331262 useful seconds. Its first-600-second mean owned charge is
+10,474,742,880 bytes and whole-case owned peak is 13,718,573,056 bytes. Metadata,
+ordered-accounting, recorded guest/owned-cgroup safety, baseline integrity and
+retirement checks pass, with source pins unchanged. Mapped is 658,271,401 bytes /
+6.28% higher than this same-block control. All six matched-policy pairs across
+both counts are collected, with higher mapped point means in each. Final
+confidence intervals and decisions await the last controls and bulk validation,
+with complete-host bounds remaining explicit. Twenty-two of 24 cohorts have
+finished and block 02 continues with ordinary eight-VM native. Remaining controls
+and complete-host bounds are
 required for the final decision. No idle padding or unequal per-arm work is
 permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
