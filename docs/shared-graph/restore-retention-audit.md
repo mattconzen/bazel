@@ -80,3 +80,25 @@ when requested, and count/value/version reads avoid them. Reachability checks
 cover collectable views and values, alongside existing promotion, rollback,
 rebinding and reader-retirement tests. Physical validation of the new binary
 remains pending; all byte measurements above retain their older source identity.
+
+## PMEM staging-cache check
+
+The archived first block of the old/new mapped-view comparison records a
+128 MiB PMEM device file in each mapped arm. Publication hashes populate all
+32,768 host file-cache pages. The existing stopped-generation staging policy
+then advises that same owned file; validated before/after residency bitmaps
+report **134,217,728 bytes before and zero bytes after**, with stable file
+identity, before any worker restore. Both arms also record temporary export
+copies unlinked before resume. These records are preserved in the
+[first-block raw bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/comparison-block-00)
+and its `pmem-staging-audit.json`; the original and extracted trial records are
+byte-identical.
+
+This rules out retaining the entire preparation-hash-populated PMEM cache into
+restore in these two cases. Subtracting the arena size from the device's logical
+size does not establish wasted resident cache. The active root/RAM advice does
+not cover PMEM, and the external-support file ledger does not inventory this
+owned PMEM file. Useful-window PMEM cache residency outside the selected arena
+therefore remains unmeasured. The terminal selected-page sharing observer cannot
+fill that gap. No additional cache policy is selected from this check, and it
+does not qualify physical savings or complete the restore-overhead gate.
