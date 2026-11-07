@@ -433,6 +433,17 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   The changes remain on an isolated branch to preserve the live comparison's
   frozen source closure. A process mapping is not a VM capture; actual saved-state
   provenance, producer/PNG integration and larger physical attribution stay open.
+  A separate [larger-native producer and PNG replay tool](https://github.com/mattconzen/bazel-shared-graph-bench/tree/80ecd2c/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/LARGE-NATIVE-OWNER-PROBE.md)
+  now implements that integration on the isolated branch: a private completed
+  native-root clone, actual pilot/final state decoding, full snapshot/root pairing,
+  five owner checkpoints, 512 MiB held pressure, retained/active cache roles and
+  post-reader hashes. It is explicitly a warmed-output diagnostic. The combined
+  plotting-environment suite passes 201 tests; a final added cache-path control
+  and all nine transcript checks pass under both runtimes. The native cold-clean
+  path remains separately tested. The adapter preserves the retained 3 GiB state
+  hash, with a small portable state proof. Live 8 GiB collection and its replay
+  remain pending until the frozen matrix and final controls finish; no larger
+  physical-owner or savings gate is passed by code/tests alone.
 - [ ] Reconcile the complete host-memory ledger, including baseline backing and
   support memory outside VMM mappings. Quantify accounting error and unknowns.
   The [host accounting source audit](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5adb0d3/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-accounting-source-audit)
