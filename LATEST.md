@@ -547,9 +547,14 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   has collected all three arms, each completing 1,087 operations over more than
   600 useful seconds. All producer checks and owned-scope raw replays pass;
   fresh portable extraction verifies 40,698 files and reproduces all three
-  audits byte for byte under Python 3.14/3.12. The other two blocks and final
-  altered-receipt replays remain pending. One block is not a predeclared decision
-  look: no parity, net-saving or complete-host gate is passed by these data.
+  audits byte for byte under Python 3.14/3.12. The
+  [second independent block](https://github.com/mattconzen/bazel-shared-graph-bench/tree/7e74b2a/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/comparison-block-01)
+  also completes all three arms and producer checks, with independent raw replay.
+  Its fresh extraction verifies another 40,698 files and reproduces all three
+  audits byte for byte under both runtimes. Six of nine cases are collected;
+  the third block is running and final altered-receipt replays remain pending.
+  Two blocks do not reach the first predeclared decision look: no parity,
+  net-saving or complete-host gate is passed by these data.
 - [x] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
