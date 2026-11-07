@@ -19,9 +19,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.devtools.build.lib.actions.FileValue;
 import com.google.devtools.build.lib.analysis.util.BuildViewTestCase;
+import com.google.devtools.build.lib.vfs.FileSystemUtils;
 import com.google.devtools.build.lib.vfs.PathFragment;
 import com.google.devtools.build.lib.vfs.Root;
 import com.google.devtools.build.lib.vfs.RootedPath;
+import com.google.devtools.build.lib.vfs.Symlinks;
 import com.google.devtools.build.skyframe.EvaluationContext;
 import com.google.devtools.build.skyframe.InMemoryGraphFactory;
 import com.google.devtools.build.skyframe.LayeredInMemoryGraph;
@@ -201,5 +203,96 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
                 .map(a -> a.getFilename())
                 .toList())
         .containsExactly("new.txt");
+  }
+
+  @Test
+  public void reconciliationDetectsStarlarkEditWithPreservedSizeAndMtime() throws Exception {
+    scratch.file("pkg/old.txt", "old");
+    scratch.file("pkg/new.txt", "new");
+    var definitions = scratch.file("pkg/defs.bzl", "FILES = ['old.txt']");
+    scratch.file(
+        "pkg/BUILD",
+        "load(':defs.bzl', 'FILES')",
+        "filegroup(name='files', srcs=FILES)");
+    update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
+    var executor = (SequencedSkyframeExecutor) skyframeExecutor;
+    var evaluator = executor.getEvaluator();
+    String generation = prepareForContentRevalidation(executor);
+    var before = definitions.stat(Symlinks.NOFOLLOW);
+    // Overwrite the inode instead of replacing the file, then restore its saved mtime.
+    FileSystemUtils.writeContentAsLatin1(definitions, "FILES = ['new.txt']\n");
+    definitions.setLastModifiedTime(before.getLastModifiedTime());
+    var after = definitions.stat(Symlinks.NOFOLLOW);
+    assertThat(after.getNodeId()).isEqualTo(before.getNodeId());
+    assertThat(after.getSize()).isEqualTo(before.getSize());
+    assertThat(after.getLastModifiedTime()).isEqualTo(before.getLastModifiedTime());
+
+    reconcileAndAssertFiles(executor, generation, "new.txt");
+    assertThat(executor.getEvaluator()).isSameInstanceAs(evaluator);
+  }
+
+  @Test
+  public void reconciliationDetectsRetargetedStarlarkSymlink() throws Exception {
+    scratch.file("pkg/old.txt", "old");
+    scratch.file("pkg/new.txt", "new");
+    var oldDefinitions = scratch.file("pkg/old.bzl", "FILES = ['old.txt']");
+    var newDefinitions = scratch.file("pkg/new.bzl", "FILES = ['new.txt']");
+    var link = oldDefinitions.getParentDirectory().getChild("defs.bzl");
+    link.createSymbolicLink(oldDefinitions);
+    scratch.file(
+        "pkg/BUILD",
+        "load(':defs.bzl', 'FILES')",
+        "filegroup(name='files', srcs=FILES)");
+    update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
+    var executor = (SequencedSkyframeExecutor) skyframeExecutor;
+    String generation = prepareForContentRevalidation(executor);
+    link.delete();
+    link.createSymbolicLink(newDefinitions);
+
+    reconcileAndAssertFiles(executor, generation, "new.txt");
+  }
+
+  @Test
+  public void reconciliationDetectsGlobRemovalAndNewSubdirectory() throws Exception {
+    var removed = scratch.file("pkg/old.txt", "old");
+    scratch.file("pkg/BUILD", "filegroup(name='files', srcs=glob(['**/*.txt']))");
+    update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
+    var executor = (SequencedSkyframeExecutor) skyframeExecutor;
+    String generation = prepareForContentRevalidation(executor);
+    removed.delete();
+    scratch.file("pkg/nested/new.txt", "new");
+
+    reconcileAndAssertFiles(executor, generation, "new.txt");
+  }
+
+  private String prepareForContentRevalidation(SequencedSkyframeExecutor executor)
+      throws Exception {
+    executor.setEventBus(new EventBus());
+    executor.drainChangedFiles();
+    executor.noteSharedGraphCommandResult("build", true);
+    return (String)
+        executor
+            .sharedGraphOperation(
+                "prepare",
+                mode.equals("mapped") ? arena.newFolder().getAbsolutePath() : "",
+                "0123456789abcdef0123456789abcdef01234567",
+                "",
+                reporter)
+            .get("generation");
+  }
+
+  private void reconcileAndAssertFiles(
+      SequencedSkyframeExecutor executor, String generation, String... filenames) throws Exception {
+    var resumed =
+        executor.sharedGraphOperation("reconcile", "", "", generation, reporter);
+    assertThat(resumed.get("state")).isEqualTo("READY");
+    assertThat((Integer) resumed.get("changed_nodes")).isGreaterThan(0);
+    // Do not inject package invalidations: reconciliation must discover the changes itself.
+    update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
+    assertThat(
+            getFilesToBuild(getConfiguredTarget("//pkg:files")).toList().stream()
+                .map(a -> a.getFilename())
+                .toList())
+        .containsExactlyElementsIn(filenames);
   }
 }

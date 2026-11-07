@@ -440,6 +440,12 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
 - [ ] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
+  A later restored-executor regression adds Starlark content edits preserving
+  inode/size/mtime, Starlark symlink retargeting and glob removal/new-directory
+  checks in both heap/mapped modes. These pass without manual invalidations;
+  [the receipt](docs/shared-graph/validation/restore-executor-2026-11-07/receipt.json)
+  pins the tested sources. This extends analysis correctness coverage without
+  qualifying broader ordinary-command/VM scenarios or memory parity.
 - [x] Build and pin the corrected binary/image, run affected semantic/integrity
   suites, and collect matched before/after memory attribution at the declared
   physical stages. Current policy diagnostics cover before/after reconciliation,
