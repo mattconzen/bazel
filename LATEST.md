@@ -119,6 +119,14 @@ not be summed. The executable digest matches the earlier full build. Cold-build
 compiler peak coverage remains open; the
 [phase evidence](https://github.com/mattconzen/bazel-shared-graph-bench/tree/0dfd594/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/native-phase-and-lifecycle-failures)
 states that limitation and retains all three earlier failed lifecycle attempts.
+A [portable process inventory replay](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/native-process-inventory)
+now separates Rust compilation (632,698,880 maximum sampled PSS bytes), Java
+build tools and unresolved drivers from the Bazel JVM. It preserves 206
+exited-during-capture observations and the 689,902,868 ns maximum sample gap in
+that warmed host stream. Twenty-seven focused tests pass under both Python
+runtimes; all three copied raw inventories reproduce byte for byte. Sampled
+maxima remain lower bounds, the two failed guests remain failed, and full cold
+compiler-peak and complete-host coverage remain open.
 
 The subsequent lifecycle fixture passes 55 behavior/integrity checks and 335
 source-continuity checks across two independently prepared generations, with up

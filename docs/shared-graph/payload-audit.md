@@ -224,3 +224,21 @@ The warmed-native primary and patched-off controls remain required, with exact
 pins and identical completed useful work. Freeze the trace after these separate
 screens; independent comparisons, outside-memory accounting and the final
 25% decision remain open.
+
+## Build-tool attribution replay
+
+The benchmark fork's reusable `report_native_phase_inventory.py` now replays
+the completed warmed recompile/full-link profile and both failed larger guest
+captures from portable raw evidence. It identifies 632,698,880 bytes of sampled
+Rust-compiler PSS in the warmed host fixture, previously grouped as `other`, and
+keeps other Java tools, persistent Java compiler workers and unresolved drivers
+separate from the Bazel JVM. These process totals do not identify graph objects
+or recoverable shared payloads.
+
+The warmed stream contains 206 exited-during-capture observations and a maximum
+689,902,868 ns sample gap. Its maxima remain sampled lower bounds. The new
+report preserves those gaps, per-role executable-hash coverage and simultaneous
+contributors; it does not add maxima from different times or requalify the two
+failed guest builds. Both Python runtimes reproduce all three inventories byte
+for byte. The larger cold native build and physical owner/family selection gates
+remain open.
