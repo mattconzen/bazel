@@ -408,6 +408,12 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   retain the offline tool's scope. This is not a live 8 GiB owner capture or
   physical-memory result. Existing stock-VMM admission and frozen comparison
   identities remain unchanged; larger physical attribution remains open.
+  A subsequent [offline translator and portable tests](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/snapshot-address-translation)
+  reject holes, unplugged slots, malformed metadata and changing/incomplete
+  files. Thirty-seven tests pass per Python runtime, including distinct markers
+  in a sparse 8 GiB file at packed and incorrect GPA offsets. The retained 3 GiB
+  fixture passes three bounded reads. This supplies address translation only;
+  original live-observer guards remain and no larger owner capture is claimed.
 - [ ] Reconcile the complete host-memory ledger, including baseline backing and
   support memory outside VMM mappings. Quantify accounting error and unknowns.
   The [host accounting source audit](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5adb0d3/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-accounting-source-audit)
