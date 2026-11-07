@@ -368,11 +368,17 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   verification and sampled process-role attribution. Its provenance now pins
   the boot kernel, Firecracker and observed JVM/compiler/linker executables;
   a bounded raw-stream auditor and altered-receipt controls are implemented.
-  Thirty-four focused producer/auditor tests pass per Python runtime.
+  Thirty-seven focused producer/auditor tests pass per Python runtime.
   Cold compilation has no execution-time or sample-count cutoff; RAM, swap,
   disk headroom and observation bytes bound the run. The actual larger guest
-  is not yet admitted. Its first actual run is now preparing a private enlarged
-  disk and booting on this host, after the candidate VM fixtures stopped.
+  is not yet admitted. Its first actual run boots and completes clean/analysis,
+  then exits 1 before producing a verified executable. No OOM, swap or owned-limit
+  reclaim was observed. The original validator mislabeled build exit as a golden
+  mismatch; the failed runner lost the terminal error before shutdown. The
+  [failure bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/large-native-failures)
+  preserves original raw evidence and diagnostic recovery of a separate disk copy.
+  The corrected producer fsyncs diagnostics and attempts clean export on failure.
+  A fresh attempt 02 runs the same resources and original source image.
   Do not treat the current 768 MiB-heap case as representative by assumption.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
