@@ -425,6 +425,14 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   in a sparse 8 GiB file at packed and incorrect GPA offsets. The retained 3 GiB
   fixture passes three bounded reads. This supplies address translation only;
   original live-observer guards remain and no larger owner capture is claimed.
+  Separate [region-aware collector components](https://github.com/mattconzen/bazel-shared-graph-bench/tree/9744b7e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/REGION-OWNER-CAPTURE.md)
+  now project guest PFNs and kernel flags into packed saved-region indexes and
+  collect stopped-host mappings per region, counting merged VMAs once. All 115
+  focused tests pass under Python 3.14/3.12, including 8 GiB-sized owner vectors,
+  altered-input rejection and a real stopped-process sparse-mapping smoke.
+  The changes remain on an isolated branch to preserve the live comparison's
+  frozen source closure. A process mapping is not a VM capture; actual saved-state
+  provenance, producer/PNG integration and larger physical attribution stay open.
 - [ ] Reconcile the complete host-memory ledger, including baseline backing and
   support memory outside VMM mappings. Quantify accounting error and unknowns.
   The [host accounting source audit](https://github.com/mattconzen/bazel-shared-graph-bench/tree/5adb0d3/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/host-accounting-source-audit)
