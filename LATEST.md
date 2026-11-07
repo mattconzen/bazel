@@ -1,6 +1,6 @@
 # Memory sharing and reduction: current roadmap
 
-Updated 2026-11-06. Task-level acceptance remains open; completed implementation
+Updated 2026-11-07. Task-level acceptance remains open; completed implementation
 subtasks are checked below.
 
 Reduce total resident host memory across related Bazel microVM builds while
@@ -330,7 +330,9 @@ Descriptive owned charge increases between the two final epoch-GC markers in
 private/obsolete-generation growth bounds remain unqualified.
 
 Six raw archives verify 483,240 entries / 1,856,147,438 selected file bytes.
-Fresh portable cohort replay is running on the persistent filesystem. The first
+Fresh portable replay passes all 24 cohorts on the persistent filesystem; the
+owned comparison, global-event audit and growth report reproduce the original
+report hashes exactly. The first
 portable attempt reached the temporary filesystem's inode cap; its failure
 receipt and partial extraction are preserved, with original measurements and
 archives unchanged. All five overall LATEST completion gates remain open. The larger full-executable
@@ -567,10 +569,12 @@ L-04 implementation if a selected payload contributes to the candidate.
 - [x] Validate private-memory budgets, fallback on invariant/integrity failure,
   failed-reconciliation admission, rollback, shutdown/reset/clean with live
   readers, generation renewal and safe retirement. Count these controls' memory.
-- [ ] Publish a pass/fail/inconclusive decision against the current objectives,
+- [x] Publish a pass/fail/inconclusive decision against the current objectives,
   with exact source/binary/image identities, per-seed evidence and exclusions.
   Keep defaults off and any rollout conditional on passing memory and safety
-  gates; speed qualification is not required.
+  gates; speed qualification is not required. The 24-trial decision is
+  **inconclusive complete-host accounting**. All five overall completion gates
+  remain open; portable replay and owned-scope arithmetic do not qualify savings.
 
 ### Completion criteria
 
