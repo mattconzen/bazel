@@ -453,19 +453,27 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   `b127bbbcf6542bad6defad86aad8d70fc9f707e03640f8a720d50745d0de854a`.
   All seven fresh native references pass for that image (catalog SHA-256
   `42648123a796f3d681738f9d338f3f497c392417c6ecd2e98d199355fffb03c9`).
-  Candidate lifecycle/backing validation is running, including an opt-in missing-
-  output repair with withheld continuity proof and live mapped siblings.
+  Candidate lifecycle validation passes, including an opt-in missing-output
+  repair with withheld continuity proof and live mapped siblings. Full image
+  verification and all fourteen altered-receipt controls pass; shared/private
+  backing validation is now running.
   Physical comparisons remain pending; older measurements retain
   their previous source pins. The estimate is not counted as physical savings.
-- [ ] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
+- [x] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
   A later restored-executor regression adds Starlark content edits preserving
   inode/size/mtime, Starlark symlink retargeting and glob removal/new-directory
   checks in both heap/mapped modes. These pass without manual invalidations;
   [the receipt](docs/shared-graph/validation/restore-executor-2026-11-07/receipt.json)
-  pins the tested sources. This extends analysis correctness coverage without
-  qualifying broader ordinary-command/VM scenarios or memory parity.
+  pins the tested sources. The subsequent source-`008c6c626f` VM lifecycle
+  fixture passes 407 checks, thirteen fresh-native action/output comparisons,
+  full image verification and fourteen altered-receipt controls. It includes
+  actual deleted-output repair with continuity withheld, preserved-metadata
+  output repair, independent siblings and blocked ordinary queries after failed
+  reconciliation. The [coverage map](docs/shared-graph/restore-correctness-evidence.md)
+  distinguishes analysis and VM evidence. This closes the named regression
+  subtask; memory parity and overall L-02 acceptance remain open.
 - [x] Build and pin the corrected binary/image, run affected semantic/integrity
   suites, and collect matched before/after memory attribution at the declared
   physical stages. Current policy diagnostics cover before/after reconciliation,
