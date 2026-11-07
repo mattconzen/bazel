@@ -288,10 +288,14 @@ pinned protocol unchanged. Every cohort completes the same 1,087 operations and
 at least 600 useful seconds. Full replay verifies 24 distinct template memory
 hashes, matched resources/policies, source/image/reference identities, final
 baseline hashes, retired generations and ordered accounting streams. Recorded
-guest OOM, owned-cgroup OOM/limit events and swap are zero; global host-event
-counter auditing remains separate and pending.
+guest OOM, owned-cgroup OOM/limit events and swap are zero. The separate global
+host-event audit observes no OOM-counter increase, but swap-ins in 23 primary
+boundary-read intervals and all 24 full intervals. Two full intervals also have
+swap-outs, including 5,330 pages in the first eight-VM native primary interval.
+A host-wide no-swap observation is unsupported. The audit exposes read gaps and
+overhangs and does not certify continuous counter coverage or lag bounds.
 
-The [completed-matrix report and exact measured sources](https://github.com/mattconzen/bazel-shared-graph-bench/tree/0d0d03d/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02)
+The [completed-matrix report and exact measured sources](https://github.com/mattconzen/bazel-shared-graph-bench/tree/99b72c0/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02)
 preserve each seed's bytes, coverage, stage peaks, identities and arithmetic.
 The mean owned charge over each cohort's first 600 useful seconds, averaged over
 three block means, is shown below in decimal GB:
@@ -318,10 +322,18 @@ memory benefit is demonstrated.
 The report's overall decision is **inconclusive complete-host accounting**.
 Every complete-host gate remains inconclusive, and no 25% total-host saving is
 claimed. The source bundle preserves all 356 measured files plus the protocol;
-fresh extraction verifies all 357 hashes. Bulk altered-receipt controls are
-running on copies. Global host-event checks, lifetime-growth supplements,
-full raw-cohort archival and fresh portable cohort replay remain pending.
-All five overall LATEST completion gates remain open. The larger full-executable
+fresh extraction verifies all 357 hashes. All 576 actual altered-receipt controls
+pass, with original core evidence unchanged. Reusable global-event and growth
+auditors pass 20 and 16 focused tests respectively under Python 3.14 and 3.12.
+Descriptive owned charge increases between the two final epoch-GC markers in
+22 of 24 cohorts, with a maximum interpolated increase of 844,546,061 bytes;
+private/obsolete-generation growth bounds remain unqualified.
+
+Six raw archives verify 483,240 entries / 1,856,147,438 selected file bytes.
+Fresh portable cohort replay is running on the persistent filesystem. The first
+portable attempt reached the temporary filesystem's inode cap; its failure
+receipt and partial extraction are preserved, with original measurements and
+archives unchanged. All five overall LATEST completion gates remain open. The larger full-executable
 VM comparison and twenty-plus VMs remain unqualified; the ten-minute lifetime
 is a memory observation window, with no speed or execution-time objective.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
