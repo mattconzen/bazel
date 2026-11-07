@@ -435,8 +435,11 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   construction buffers; preserve required arena/integrity checks.
   The [retention audit](docs/shared-graph/restore-retention-audit.md) distinguishes
   required fallback observations, released construction locals and remaining
-  measured view/record overhead. Its possible wrapper reduction is not implemented
-  or counted as physical savings.
+  measured view/record overhead. A [predeclared view cleanup experiment](docs/shared-graph/mapped-view-cleanup.md)
+  now creates mapped dependency views on demand and keeps value/version state
+  per node. Reachability, promotion, rebinding, rollback, executor, lifecycle and
+  runtime tests pass. Its new binary/image and physical measurements are pending;
+  the estimate is not counted as physical savings.
 - [ ] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.

@@ -85,3 +85,8 @@ owners before expanding the format. Nested sets remain separately gated on
 their wrapper/body identity and traversal design. This deferral closes the
 selection decision for this iteration; it does not claim an implemented adapter,
 physical saving or passing whole-host acceptance gate.
+
+The subsequent [bounded view cleanup experiment](mapped-view-cleanup.md) acts
+on the third row as L-02 representation overhead work. It selects no new value
+family and has no qualified physical-saving result yet. Older observations and
+the configured-target/package deferrals above retain their original scope.

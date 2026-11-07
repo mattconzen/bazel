@@ -189,16 +189,11 @@ public final class LayeredInMemoryGraph extends InMemoryGraphImpl {
     int committed = 0;
     try {
       for (int i = 0; i < candidates.size(); i++) {
-        var record = candidates.get(i).record();
-        if (store instanceof MappedGraphStore mapped) {
-          record =
-              new FrozenNodeRecord(
-                  record.wrappedValue(),
-                  record.version(),
-                  mapped.directDeps(i),
-                  mapped.reverseDeps(i));
-        }
-        replacements.add(candidates.get(i).handle().frozenStorage(store, record));
+        var candidate = candidates.get(i);
+        replacements.add(
+            store instanceof MappedGraphStore mapped
+                ? candidate.handle().mappedFrozenStorage(mapped, i, candidate.record())
+                : candidate.handle().frozenStorage(store, candidate.record()));
       }
       if (Thread.interrupted()) {
         throw new InterruptedException();

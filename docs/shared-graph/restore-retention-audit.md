@@ -71,3 +71,12 @@ The next retained candidate remains the explicit backing advice, guest reporting
 and heap-release policies already recorded in [payload-audit.md](payload-audit.md),
 tested against the same policies on native. Additional adapters remain deferred
 until a net physical benefit beyond their replacement/observer costs is shown.
+
+## Follow-up view experiment
+
+The [predeclared mapped-view cleanup](mapped-view-cleanup.md) now replaces eager
+views/records with per-node store/index/value/version state. Views are created
+when requested, and count/value/version reads avoid them. Reachability checks
+cover collectable views and values, alongside existing promotion, rollback,
+rebinding and reader-retirement tests. Physical validation of the new binary
+remains pending; all byte measurements above retain their older source identity.

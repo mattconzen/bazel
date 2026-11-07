@@ -210,10 +210,7 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
     scratch.file("pkg/old.txt", "old");
     scratch.file("pkg/new.txt", "new");
     var definitions = scratch.file("pkg/defs.bzl", "FILES = ['old.txt']");
-    scratch.file(
-        "pkg/BUILD",
-        "load(':defs.bzl', 'FILES')",
-        "filegroup(name='files', srcs=FILES)");
+    scratch.file("pkg/BUILD", "load(':defs.bzl', 'FILES')", "filegroup(name='files', srcs=FILES)");
     update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
     var executor = (SequencedSkyframeExecutor) skyframeExecutor;
     var evaluator = executor.getEvaluator();
@@ -239,10 +236,7 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
     var newDefinitions = scratch.file("pkg/new.bzl", "FILES = ['new.txt']");
     var link = oldDefinitions.getParentDirectory().getChild("defs.bzl");
     link.createSymbolicLink(oldDefinitions);
-    scratch.file(
-        "pkg/BUILD",
-        "load(':defs.bzl', 'FILES')",
-        "filegroup(name='files', srcs=FILES)");
+    scratch.file("pkg/BUILD", "load(':defs.bzl', 'FILES')", "filegroup(name='files', srcs=FILES)");
     update(ImmutableList.of("//pkg:files"), false, 1, true, new EventBus());
     var executor = (SequencedSkyframeExecutor) skyframeExecutor;
     String generation = prepareForContentRevalidation(executor);
@@ -283,8 +277,7 @@ public final class SharedGraphExecutorIntegrationTest extends BuildViewTestCase 
 
   private void reconcileAndAssertFiles(
       SequencedSkyframeExecutor executor, String generation, String... filenames) throws Exception {
-    var resumed =
-        executor.sharedGraphOperation("reconcile", "", "", generation, reporter);
+    var resumed = executor.sharedGraphOperation("reconcile", "", "", generation, reporter);
     assertThat(resumed.get("state")).isEqualTo("READY");
     assertThat((Integer) resumed.get("changed_nodes")).isGreaterThan(0);
     // Do not inject package invalidations: reconciliation must discover the changes itself.

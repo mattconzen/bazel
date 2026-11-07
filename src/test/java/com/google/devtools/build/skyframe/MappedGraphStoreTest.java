@@ -146,6 +146,48 @@ public final class MappedGraphStoreTest {
   }
 
   @Test
+  public void dependencyViewsAreNotRetainedByFrozenNode() throws Exception {
+    var entry = complete();
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    var direct = new WeakReference<>(entry.getDoneDeps());
+    var reverse = new WeakReference<>(entry.getReverseDepsForDoneEntry());
+    GcFinalization.awaitClear(direct);
+    GcFinalization.awaitClear(reverse);
+    assertThat(entry.isFrozen()).isTrue();
+    assertThat(entry.hasAtLeastOneDep()).isTrue();
+    assertThat(entry.getDoneDeps())
+        .containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c"))
+        .inOrder();
+    assertThat(entry.getReverseDepsForDoneEntry())
+        .containsExactly(GraphTester.skyKey("parent1"), GraphTester.skyKey("parent2"));
+    assertThat(graph.materializedDependencyCount()).isEqualTo(0);
+    java.lang.ref.Reference.reachabilityFence(entry);
+  }
+
+  private record RetainedReaders(
+      DoneDeps direct, java.util.Collection<SkyKey> reverse, WeakReference<SkyValue> value) {}
+
+  private RetainedReaders freezeAndRetainReaders() throws Exception {
+    var entry = complete();
+    var value = new WeakReference<>(entry.getValue());
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    return new RetainedReaders(entry.getDoneDeps(), entry.getReverseDepsForDoneEntry(), value);
+  }
+
+  @Test
+  public void retainedReadersDoNotPinRemovedNodeValue() throws Exception {
+    var readers = freezeAndRetainReaders();
+    graph.cleanupInterningPools();
+    GcFinalization.awaitClear(readers.value());
+    assertThat(readers.direct())
+        .containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c"))
+        .inOrder();
+    assertThat(readers.reverse())
+        .containsExactly(GraphTester.skyKey("parent1"), GraphTester.skyKey("parent2"));
+    java.lang.ref.Reference.reachabilityFence(readers);
+  }
+
+  @Test
   public void identicalRebindPreservesRetainedCursorsAndReleasesOldMapping() throws Exception {
     var entry = complete();
     var generation = graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);

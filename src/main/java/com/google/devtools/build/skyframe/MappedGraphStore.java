@@ -330,6 +330,10 @@ final class MappedGraphStore extends FrozenGraphStore {
     return new MappedDoneDeps(this, getLong(HEADER_BYTES + (long) index * RECORD_BYTES + 16));
   }
 
+  int directDependencyCount(int index) {
+    return getInt(getLong(HEADER_BYTES + (long) index * RECORD_BYTES + 16) + 4);
+  }
+
   List<SkyKey> reverseDeps(int index) {
     long offset = getLong(HEADER_BYTES + (long) index * RECORD_BYTES + 32);
     return new KeyList(this, offset + 4, getInt(offset));
