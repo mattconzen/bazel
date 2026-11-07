@@ -285,7 +285,7 @@ freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
 collection. The sequential independent matrix is running. Its first four-VM
 native case completes 1,087 operations over 821.126545698 useful seconds, with
 source/work/JVM/guest-OOM/baseline and ordered-accounting replay passing. The
-[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/e3dafc0/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
+[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/1bf5f44/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
 reports mean owned charge 12,274,525,568 bytes over the first 600 seconds. Guest/
 host OOM, limit events and swap are zero. This is one native seed, not a paired
 memory-saving or statistical decision. The patched-off cohort also completes
@@ -347,9 +347,17 @@ ordered-accounting, recorded guest/owned-cgroup safety and final baseline checks
 pass, with the generation retired and source pins unchanged. Mapped is
 609,032,535 bytes / 5.83% higher than this same-block control. Both completed
 eight-VM matched-policy pairs show mapped higher; these are descriptive points,
-not the predeclared three-block statistical decision. Eleven of 24 cohorts have
-finished and block 01 continues with ordinary eight-VM native. Remaining blocks
-and complete-host bounds are
+not the predeclared three-block statistical decision. Block 01's ordinary
+eight-VM native baseline also completes 1,087 operations over 1,002.167376404
+useful seconds. Its first-600-second mean owned charge is 19,188,958,768 bytes
+and whole-case owned peak is 20,866,695,168 bytes. Metadata, ordered-accounting,
+recorded guest/owned-cgroup safety, baseline integrity and retirement checks
+pass. All four eight-VM arms are complete in each of the first two blocks.
+In block 01, mapped plus policies is 42.37% below ordinary native in owned scope;
+native with the same policies is 45.55% below ordinary native. These are point
+comparisons, not whole-host acceptance or proof of an incremental backend saving.
+Twelve of 24 cohorts have finished and block 01 continues with four-VM
+patched-off. Remaining blocks and complete-host bounds are
 required for the final decision. No idle padding or unequal per-arm work is
 permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
