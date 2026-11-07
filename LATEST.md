@@ -369,8 +369,8 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   separately pinned larger full-executable native protocol. See the benchmark
   fork's `LARGE-ENVOY-PROTOCOL.md` and completed 4 GiB-heap host diagnostic.
 - [ ] Admit any larger full-executable VM comparison using enough memory for
-  native to complete, then match resources across arms. No larger guest image or
-  four-VM full-build comparison is yet qualified. A separate native admission
+  native to complete, then match resources across arms. No four-VM full-build
+  comparison is yet qualified. A separate native admission
   producer now implements the proposed 8 GiB guest / 4 GiB heap / four vCPUs /
   two slots, full executable rebuild after private native clean, exact BEP/digest
   verification and sampled process-role attribution. Its provenance now pins
@@ -378,8 +378,8 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   a bounded raw-stream auditor and altered-receipt controls are implemented.
   Forty focused producer/auditor/image tests pass per Python runtime.
   Cold compilation has no execution-time or sample-count cutoff; RAM, swap,
-  disk headroom and observation bytes bound the run. The actual larger guest
-  is not yet admitted. Its first actual run boots and completes clean/analysis,
+  disk headroom and observation bytes bound the run. Earlier attempts did not
+  admit the larger guest. The first actual run boots and completes clean/analysis,
   then exits 1 before producing a verified executable. No OOM, swap or owned-limit
   reclaim was observed. The original validator mislabeled build exit as a golden
   mismatch; the failed runner lost the terminal error before shutdown. The
@@ -393,7 +393,18 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   now checks Python under the action PATH before starting the full build.
   That derived image is prepared with SHA-256
   `2468581b6492e2c84c9ac44aaa8dda2ae03d004e35dc4c0498565296997df817`;
-  fresh attempt 03 runs the unchanged resources, inputs and golden executable.
+  Attempt 03 now completes full and repeat builds with those unchanged
+  resources/inputs and the expected 517,247,760-byte executable. Its one-VM
+  admission passes raw replay and all eleven altered-receipt controls, with
+  4,100 process samples, zero observed swap/OOM/owned-limit events and unchanged
+  source-image bytes. Whole-case owned peak is 15,318,822,912 bytes, including
+  preparation and intrusive terminal diagnostics; this is not a saving.
+  The [raw bundle and portable replay](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/large-native-admission-03)
+  verify 372 archived files and reproduce the audit byte for byte under Python
+  3.14/3.12. An auditor correction compares the complete successful persisted
+  command, including server/executable identities. The original false rejection
+  and failed handoff remain preserved; no failed attempt is relabeled. Larger
+  matched cohorts and complete-host accounting remain open.
   Do not treat the current 768 MiB-heap case as representative by assumption.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
@@ -507,17 +518,19 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   positions balanced. Plan SHA-256 is
   `78e3156fa7141e8ac933f6e44e7a208af7f342700b778f9b5cd21a0c31fa1086`.
   Twenty-one focused runner/reporter tests pass under both Python runtimes.
-  Collection remains pending until the larger native fixture stops. Each case
+  Collection starts after the successful native admission and its replay. Each case
   uses the same full 1,087-operation trace, 512 MiB held pressure per guest and
   at least 600 useful seconds; no execution-time cutoff applies. The reporter
   preserves preparation/useful/observer peaks and keeps sampled owned-scope
   arithmetic separate from the unresolved complete-host gate. Intrusive physical
   attribution and L-05 primary controls remain required.
   A [guarded handoff](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/mapped-view-cleanup/handoff-registration-01)
-  is now waiting on the exact native attempt 03 unit invocation, controller PID
-  and start ticks. No new VM starts until that controller exits successfully,
-  native raw replay and all eleven altered-receipt controls pass. It then runs
-  the nine frozen cohorts sequentially, the comparison replay and per-case
+  initially waited on the exact native attempt 03 unit invocation, controller PID
+  and start ticks. Handoff 01 stopped before any cohort when the old auditor
+  wrongly omitted enriched command fields. Fresh handoff 02 pins the corrected
+  auditor, verifies successful native termination and passes raw replay and all
+  eleven altered-receipt controls. It now starts the first of nine unchanged
+  frozen cohorts (`b00-old-mapped`), followed by comparison replay and per-case
   altered controls. Nineteen focused handoff tests pass per Python runtime.
   Transient observation failure triggers a re-poll; changed identities or a
   failed prerequisite stop further launches. Waiting/controller memory remains

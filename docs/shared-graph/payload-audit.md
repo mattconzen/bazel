@@ -34,8 +34,9 @@ At the largest linker sample, the overlapping unit charge is 13,573,373,952 byte
 with 9,487,806,464 file bytes, 3,897,819,136 anon and 185,442,304 kernel bytes.
 Do not add these sampled role maxima or sum them with cgroup charges. This
 [retained phase diagnostic](https://github.com/mattconzen/bazel-shared-graph-bench/tree/0dfd594/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/native-phase-and-lifecycle-failures)
-attributes the warmed recompile/link footprint; the cold whole-build compiler
-peak remains unobserved.
+attributes the warmed recompile/link footprint. That diagnostic did not observe
+cold whole-build compilation; the later guest admission below supplies sampled
+cold-build coverage.
 
 The separate post-repeat heap diagnostic uses OpenJDK 27+35, G1, compact object
 headers, compressed references and eight-byte object alignment, all observed
@@ -240,5 +241,22 @@ The warmed stream contains 206 exited-during-capture observations and a maximum
 report preserves those gaps, per-role executable-hash coverage and simultaneous
 contributors; it does not add maxima from different times or requalify the two
 failed guest builds. Both Python runtimes reproduce all three inventories byte
-for byte. The larger cold native build and physical owner/family selection gates
-remain open.
+for byte. The later 8 GiB-guest / 4 GiB-heap native admission now completes both
+the full cold executable build and repeat, with the same golden digest. Its
+[portable raw admission](https://github.com/mattconzen/bazel-shared-graph-bench/tree/shared-graph/envoy-scale-pressure/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/large-native-admission-03)
+contains 4,100 samples: 4,087 full-build and thirteen repeat samples. Sampled
+concurrent JVM PSS reaches 2,634,131,456 bytes, C/C++ compiler PSS 2,256,894,976
+and linker PSS 2,596,096,000 at different times. The largest simultaneous
+all-process PSS is 5,221,538,816 bytes. These are guest process quantities and
+must not be added to each other or to the 15,318,822,912-byte whole-case host
+owned peak. That peak also includes preparation and intrusive terminal export.
+
+The cold stream retains 525 exited-during-capture observations and a maximum
+3,804,045,405 ns gap. Its sampled maxima remain lower bounds; executable identity
+is unavailable for six compiler observations and one linker observation.
+The terminal pre-profile G1 heap has 2,027,945,984 committed / 1,743,031,296 used
+logical bytes. A subsequent intrusive full-GC histogram totals 444,086,776 shallow
+bytes; its 794,055,222-byte HPROF remains on the host with a pinned hash. These
+different stages do not establish reclaimable resident bytes or select a value
+adapter. Actual larger guest ownership/family attribution, matched cohorts and
+complete-host accounting remain open.
