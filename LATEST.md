@@ -365,8 +365,13 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   four-VM full-build comparison is yet qualified. A separate native admission
   producer now implements the proposed 8 GiB guest / 4 GiB heap / four vCPUs /
   two slots, full executable rebuild after private native clean, exact BEP/digest
-  verification and sampled process-role attribution. Seventeen focused tests
-  pass per Python runtime; the actual larger guest is not yet admitted.
+  verification and sampled process-role attribution. Its provenance now pins
+  the boot kernel, Firecracker and observed JVM/compiler/linker executables;
+  a bounded raw-stream auditor and altered-receipt controls are implemented.
+  Thirty-four focused producer/auditor tests pass per Python runtime.
+  Cold compilation has no execution-time or sample-count cutoff; RAM, swap,
+  disk headroom and observation bytes bound the run. The actual larger guest
+  is not yet admitted.
   Do not treat the current 768 MiB-heap case as representative by assumption.
 - [ ] Attribute live graph payloads, dependency storage, keys/indexes, committed
   heap, allocation/GC-related private pages, JVM native memory, compiler/linker
