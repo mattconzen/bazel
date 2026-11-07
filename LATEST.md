@@ -438,8 +438,13 @@ qualify an unavailable scale, and no larger-host provisioning is authorized.
   measured view/record overhead. A [predeclared view cleanup experiment](docs/shared-graph/mapped-view-cleanup.md)
   now creates mapped dependency views on demand and keeps value/version state
   per node. Reachability, promotion, rebinding, rollback, executor, lifecycle and
-  runtime tests pass. Its new binary/image and physical measurements are pending;
-  the estimate is not counted as physical savings.
+  runtime tests pass. Source `008c6c626f` builds cleanly; binary SHA-256 is
+  `d7e4fb44e782fdfdfb1ee1afbdbfe624bc58a66b50adc880c932ab360645f4b1`
+  and independently derived image SHA-256 is
+  `b127bbbcf6542bad6defad86aad8d70fc9f707e03640f8a720d50745d0de854a`.
+  Fresh native references are being collected for that image. Candidate VM
+  validation and physical comparisons remain pending; older measurements retain
+  their previous source pins. The estimate is not counted as physical savings.
 - [ ] Preserve detection of size/mtime-preserving edits, directory/glob/symlink
   changes, missing or changed outputs, watcher discontinuity and independent
   sibling edits. Keep failed reconciliation closed to ordinary commands.
