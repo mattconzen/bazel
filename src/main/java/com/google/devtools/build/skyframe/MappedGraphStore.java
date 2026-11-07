@@ -56,19 +56,29 @@ final class MappedGraphStore extends FrozenGraphStore {
   private static final ValueLayout.OfLong LONG =
       ValueLayout.JAVA_LONG_UNALIGNED.withOrder(ByteOrder.BIG_ENDIAN);
 
-  private final MemorySegment data;
+  private record Backing(Path file, MemorySegment data) {}
+
+  private volatile Backing backing;
   private final SkyKey[] keys;
-  private final Path file;
   private final String revision;
+  private final byte[] checksum;
+  private volatile long prefaultWitness;
   private final LongAdder materializedDependencies = new LongAdder();
+  private boolean rebound;
 
   private MappedGraphStore(
-      int size, UUID generation, Path file, String revision, SkyKey[] keys, MemorySegment data) {
+      int size,
+      UUID generation,
+      Path file,
+      String revision,
+      SkyKey[] keys,
+      MemorySegment data,
+      byte[] checksum) {
     super(size, generation);
-    this.file = file;
     this.revision = revision;
     this.keys = keys;
-    this.data = data;
+    this.backing = new Backing(file, data);
+    this.checksum = checksum;
   }
 
   static MappedGraphStore create(
@@ -179,7 +189,8 @@ final class MappedGraphStore extends FrozenGraphStore {
       // initial Linux snapshot deployment deliberately requires a filesystem with hard-link
       // support.
       var publishedStore =
-          new MappedGraphStore(store.size(), generation, file, revision, keys, store.data);
+          new MappedGraphStore(
+              store.size(), generation, file, revision, keys, store.backing.data(), store.checksum);
       Files.setPosixFilePermissions(temporary, Set.of(PosixFilePermission.OWNER_READ));
       Files.createLink(file, temporary);
       return publishedStore;
@@ -242,7 +253,8 @@ final class MappedGraphStore extends FrozenGraphStore {
       try (var channel = FileChannel.open(file, StandardOpenOption.READ)) {
         mapping = channel.map(FileChannel.MapMode.READ_ONLY, 0, end, Arena.ofAuto());
       }
-      var store = new MappedGraphStore(records, generation, file, revision, keys, mapping);
+      var store =
+          new MappedGraphStore(records, generation, file, revision, keys, mapping, expected);
       store.validateRecords(directStart, reverseStart, end);
       return store;
     } catch (ArithmeticException | IndexOutOfBoundsException failure) {
@@ -318,6 +330,10 @@ final class MappedGraphStore extends FrozenGraphStore {
     return new MappedDoneDeps(this, getLong(HEADER_BYTES + (long) index * RECORD_BYTES + 16));
   }
 
+  int directDependencyCount(int index) {
+    return getInt(getLong(HEADER_BYTES + (long) index * RECORD_BYTES + 16) + 4);
+  }
+
   List<SkyKey> reverseDeps(int index) {
     long offset = getLong(HEADER_BYTES + (long) index * RECORD_BYTES + 32);
     return new KeyList(this, offset + 4, getInt(offset));
@@ -347,11 +363,11 @@ final class MappedGraphStore extends FrozenGraphStore {
   }
 
   int getInt(long offset) {
-    return data.get(INT, offset);
+    return backing.data().get(INT, offset);
   }
 
   private long getLong(long offset) {
-    return data.get(LONG, offset);
+    return backing.data().get(LONG, offset);
   }
 
   SkyKey key(int id) {
@@ -360,12 +376,80 @@ final class MappedGraphStore extends FrozenGraphStore {
 
   @Override
   long mappedBytes() {
-    return data.byteSize();
+    return backing.data().byteSize();
   }
 
   @Override
   Path backingFile() {
-    return file;
+    return backing.file();
+  }
+
+  void verifyBackingFile() throws IOException {
+    var current = backing;
+    verifyFile(current.file(), current.data().byteSize());
+  }
+
+  private void verifyFile(Path file, long expectedBytes) throws IOException {
+    // This store and its Java tables were fully validated before template publication. Restore
+    // must prove that the file is exactly that validated arena, rather than allocate per-record
+    // duplicate-detection sets and another mapping for identical bytes. Keep both the manifest's
+    // digest and a fresh digest of the complete file tied to the checksum saved in the warmed JVM.
+    // The controller excludes writers throughout this operation, as during initial validation.
+    require(Files.size(file) == expectedBytes, "Arena length changed since template preparation");
+    MessageDigest actual = digest();
+    long bytes = 0;
+    try (var in = new BufferedInputStream(Files.newInputStream(file))) {
+      byte[] header = in.readNBytes(HEADER_BYTES);
+      require(header.length == HEADER_BYTES, "Truncated manifest");
+      require(
+          MessageDigest.isEqual(
+              checksum, Arrays.copyOfRange(header, CHECKSUM_OFFSET, CHECKSUM_OFFSET + 32)),
+          "Arena manifest changed since template preparation");
+      Arrays.fill(header, CHECKSUM_OFFSET, CHECKSUM_OFFSET + 32, (byte) 0);
+      actual.update(header);
+      bytes = header.length;
+      byte[] chunk = new byte[64 * 1024];
+      int count;
+      while ((count = in.read(chunk)) != -1) {
+        actual.update(chunk, 0, count);
+        bytes += count;
+      }
+    }
+    require(bytes == expectedBytes, "Arena length changed during restore verification");
+    require(
+        MessageDigest.isEqual(checksum, actual.digest()),
+        "Arena changed since template preparation");
+  }
+
+  /**
+   * Retargets existing readers to exactly the validated generation's bytes, once. The caller must
+   * exclude writers and ordinary commands, and prove the new filesystem is read-only. Canonical
+   * keys, values, node IDs and cursor offsets remain coupled to this warmed JVM. This is not an
+   * import API or proof of DAX/physical sharing. Automatic arenas retain any in-flight old segment
+   * until its readers finish; retained cursors keep this store, not a decoded payload or old map.
+   */
+  synchronized void rebind(Path file) throws IOException {
+    require(!rebound, "Arena backing was already rebound");
+    long bytes = backing.data().byteSize();
+    verifyFile(file, bytes);
+    MemorySegment mapping;
+    try (var channel = FileChannel.open(file, StandardOpenOption.READ)) {
+      mapping = channel.map(FileChannel.MapMode.READ_ONLY, 0, bytes, Arena.ofAuto());
+    }
+    var replacement = new Backing(file, mapping);
+    // All fallible construction precedes these allocation-free stores. Every
+    // readable byte matches the original manifest/checksum, including offsets.
+    rebound = true;
+    backing = replacement;
+  }
+
+  void prefault() {
+    var data = backing.data();
+    long witness = 0;
+    for (long offset = 0; offset < data.byteSize(); offset += 4096) {
+      witness += data.get(ValueLayout.JAVA_BYTE, offset);
+    }
+    prefaultWitness = witness;
   }
 
   void recordMaterialization(int count) {
@@ -377,7 +461,11 @@ final class MappedGraphStore extends FrozenGraphStore {
   }
 
   boolean isReadOnlyForTesting() {
-    return data.isReadOnly();
+    return backing.data().isReadOnly();
+  }
+
+  MemorySegment mappingForTesting() {
+    return backing.data();
   }
 
   SkyKey[] keyTableForTesting() {

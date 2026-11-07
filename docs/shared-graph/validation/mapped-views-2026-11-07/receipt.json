@@ -1,0 +1,29 @@
+{
+  "status": "tests-passed",
+  "started_ns": 1794031908957056730,
+  "java_sha256": {
+    "src/main/java/com/google/devtools/build/skyframe/LayeredNodeEntry.java": "b69692671c96912a720b01c92e46222de5fc3ee36223348c1a89994b01eb19cc",
+    "src/main/java/com/google/devtools/build/skyframe/MappedGraphStore.java": "9600ebef37ccdd8f13fba8e203a8e5f20df2a74dffe72974c1da8740462b4497",
+    "src/main/java/com/google/devtools/build/skyframe/LayeredInMemoryGraph.java": "84d416750d88ef0c1cfed237dd92fd586e1093cc907d516d07c5ba2e04842766",
+    "src/test/java/com/google/devtools/build/skyframe/MappedGraphStoreTest.java": "49ba7afaed2834ed021e0f18076831812eee1468462429c8abaa09b9cb87927b",
+    "src/main/java/com/google/devtools/build/lib/skyframe/SharedGraphLifecycle.java": "2031337b7cadf67df369bd80e4fc4ed6d13bf160d03094a47c27756959987ad3",
+    "src/main/java/com/google/devtools/build/lib/skyframe/SequencedSkyframeExecutor.java": "66d64bcda870cb439f19d411dc63d80d368028a42ea6902aaf935100128c30d8",
+    "src/main/java/com/google/devtools/build/lib/runtime/commands/SharedGraphCommand.java": "374171e3bf23a38499c4bb8f347e8deacad043d6da528ba26a6fd455014c6bf3",
+    "src/test/java/com/google/devtools/build/lib/skyframe/SharedGraphLifecycleTest.java": "741c132a66cf260af15caedf66b1aa242a0dd6599e59312d8fedcbf0832dddff",
+    "src/test/java/com/google/devtools/build/lib/skyframe/SharedGraphExecutorIntegrationTest.java": "7ce82248392914ef020733a1b6aaca44b7072dc05d58b4ce6b57b8668ddece46"
+  },
+  "test_command": [
+    "/home/bazzite/.local/bin/bazel",
+    "--host_jvm_args=-Xmx3g",
+    "test",
+    "//src/test/java/com/google/devtools/build/lib/skyframe:SharedGraphLifecycleTest",
+    "//src/test/java/com/google/devtools/build/lib/skyframe:SharedGraphExecutorIntegrationTest",
+    "//src/test/java/com/google/devtools/build/skyframe:SkyframeTests",
+    "//src/test/java/com/google/devtools/build/lib/runtime:RuntimeTests",
+    "--jobs=2",
+    "--test_output=errors"
+  ],
+  "test_returncode": 0,
+  "shutdown_returncode": 0,
+  "finished_ns": 1794031923599834272
+}

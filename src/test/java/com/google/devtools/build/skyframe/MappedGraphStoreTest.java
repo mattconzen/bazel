@@ -101,10 +101,29 @@ public final class MappedGraphStoreTest {
     var entry = complete();
     var compressed = new WeakReference<>(entry.getCompressedDirectDepsForDoneEntry());
     var delegate = oldStorage(entry);
-    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION, true);
     GcFinalization.awaitClear(compressed);
     GcFinalization.awaitClear(delegate);
+    var audit = graph.finishRetentionAudit();
+    assertThat(((java.util.Map<?, ?>) audit.get("direct_array")).get("surviving_references"))
+        .isEqualTo(0L);
+    assertThat(((java.util.Map<?, ?>) audit.get("native_delegate")).get("surviving_references"))
+        .isEqualTo(0L);
     assertThat(entry.getDoneDeps()).hasSize(2);
+  }
+
+  @Test
+  public void retentionAuditReportsAnExternallyRetainedArray() throws Exception {
+    var entry = complete();
+    Object held = entry.getCompressedDirectDepsForDoneEntry();
+    var delegate = oldStorage(entry);
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION, true);
+    GcFinalization.awaitClear(delegate);
+    var audit = graph.finishRetentionAudit();
+    assertThat(((java.util.Map<?, ?>) audit.get("direct_array")).get("surviving_references"))
+        .isEqualTo(1L);
+    java.lang.ref.Reference.reachabilityFence(held);
+    assertThat(graph.finishRetentionAudit()).isEmpty();
   }
 
   private static WeakReference<Object> oldStorage(LayeredNodeEntry entry) {
@@ -124,6 +143,99 @@ public final class MappedGraphStoreTest {
     assertThat(reader).containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c")).inOrder();
     assertThat(reverse).hasSize(2);
     assertThat(Files.exists(file)).isTrue();
+  }
+
+  @Test
+  public void dependencyViewsAreNotRetainedByFrozenNode() throws Exception {
+    var entry = complete();
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    var direct = new WeakReference<>(entry.getDoneDeps());
+    var reverse = new WeakReference<>(entry.getReverseDepsForDoneEntry());
+    GcFinalization.awaitClear(direct);
+    GcFinalization.awaitClear(reverse);
+    assertThat(entry.isFrozen()).isTrue();
+    assertThat(entry.hasAtLeastOneDep()).isTrue();
+    assertThat(entry.getDoneDeps())
+        .containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c"))
+        .inOrder();
+    assertThat(entry.getReverseDepsForDoneEntry())
+        .containsExactly(GraphTester.skyKey("parent1"), GraphTester.skyKey("parent2"));
+    assertThat(graph.materializedDependencyCount()).isEqualTo(0);
+    java.lang.ref.Reference.reachabilityFence(entry);
+  }
+
+  private record RetainedReaders(
+      DoneDeps direct, java.util.Collection<SkyKey> reverse, WeakReference<SkyValue> value) {}
+
+  private RetainedReaders freezeAndRetainReaders() throws Exception {
+    var entry = complete();
+    var value = new WeakReference<>(entry.getValue());
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    return new RetainedReaders(entry.getDoneDeps(), entry.getReverseDepsForDoneEntry(), value);
+  }
+
+  @Test
+  public void retainedReadersDoNotPinRemovedNodeValue() throws Exception {
+    var readers = freezeAndRetainReaders();
+    graph.cleanupInterningPools();
+    GcFinalization.awaitClear(readers.value());
+    assertThat(readers.direct())
+        .containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c"))
+        .inOrder();
+    assertThat(readers.reverse())
+        .containsExactly(GraphTester.skyKey("parent1"), GraphTester.skyKey("parent2"));
+    java.lang.ref.Reference.reachabilityFence(readers);
+  }
+
+  @Test
+  public void identicalRebindPreservesRetainedCursorsAndReleasesOldMapping() throws Exception {
+    var entry = complete();
+    var generation = graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    var store = (MappedGraphStore) graph.baselineStoreForTesting();
+    var reader = entry.getDoneDeps();
+    var group = reader.groups().iterator().next();
+    var reverse = entry.getReverseDepsForDoneEntry();
+    var key = reader.iterator().next();
+    var oldMapping = new WeakReference<>(store.mappingForTesting());
+    Path original = graph.backingFile();
+    Path replacement = Files.copy(original, directory().resolve("replacement.arena"));
+    byte[] bytes = Files.readAllBytes(replacement);
+    graph.rebindMappedBaseline(replacement);
+    GcFinalization.awaitClear(oldMapping);
+    assertThat(graph.baselineGeneration()).isEqualTo(generation);
+    assertThat(graph.backingFile()).isEqualTo(replacement);
+    assertThat(store.isReadOnlyForTesting()).isTrue();
+    assertThat(reader.iterator().next()).isSameInstanceAs(key);
+    assertThat(reader).containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c")).inOrder();
+    assertThat(group).containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c")).inOrder();
+    assertThat(reverse).hasSize(2);
+    assertThat(graph.materializedDependencyCount()).isEqualTo(0);
+    entry.markDirty(DirtyType.CHANGE);
+    assertThat(Files.readAllBytes(replacement)).isEqualTo(bytes);
+    graph.cleanupInterningPools();
+    assertThat(reader).containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c")).inOrder();
+    assertThrows(IOException.class, () -> store.rebind(replacement));
+  }
+
+  @Test
+  public void rebindRejectsDifferentValidArenaAndLeavesOriginalReadersUsable() throws Exception {
+    var entry = complete();
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    Path original = graph.backingFile();
+    byte[] bytes = Files.readAllBytes(original);
+    var buffer = ByteBuffer.wrap(bytes);
+    int direct = (int) buffer.getLong(MappedGraphStore.HEADER_BYTES + 16);
+    int first = buffer.getInt(direct + 12);
+    buffer.putInt(direct + 12, buffer.getInt(direct + 16));
+    buffer.putInt(direct + 16, first);
+    rewriteChecksum(bytes);
+    Path other = Files.write(directory().resolve("different.arena"), bytes);
+    assertThrows(IOException.class, () -> graph.rebindMappedBaseline(other));
+    assertThat(graph.backingFile()).isEqualTo(original);
+    graph.verifyBaseline();
+    assertThat(entry.getDoneDeps())
+        .containsExactly(GraphTester.skyKey("b"), GraphTester.skyKey("c"))
+        .inOrder();
   }
 
   @Test
@@ -187,6 +299,60 @@ public final class MappedGraphStoreTest {
         () ->
             MappedGraphStore.openValidated(
                 corrupt, store.generation(), REVISION, store.size(), store.keyTableForTesting()));
+  }
+
+  @Test
+  public void restoreVerificationRejectsManifestBodyAndLengthChanges() throws Exception {
+    complete();
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    graph.verifyBaseline();
+    Path file = graph.backingFile();
+    byte[] original = Files.readAllBytes(file);
+    Files.setPosixFilePermissions(
+        file,
+        java.util.Set.of(
+            java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+            java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
+    for (int offset : new int[] {0, MappedGraphStore.CHECKSUM_OFFSET, original.length - 1}) {
+      byte[] changed = original.clone();
+      changed[offset] ^= 1;
+      Files.write(file, changed);
+      assertThrows(IOException.class, graph::verifyBaseline);
+    }
+    Files.write(file, Arrays.copyOf(original, original.length - 1));
+    assertThrows(IOException.class, graph::verifyBaseline);
+    Files.write(file, Arrays.copyOf(original, original.length + 1));
+    assertThrows(IOException.class, graph::verifyBaseline);
+    Files.write(file, original);
+    graph.verifyBaseline();
+  }
+
+  @Test
+  public void restoreVerificationRejectsChangedArenaEvenWithValidNewChecksum() throws Exception {
+    complete();
+    graph.freezeMappedAtQuiescentBoundary(directory(), REVISION);
+    graph.verifyBaseline();
+    Path file = graph.backingFile();
+    byte[] bytes = Files.readAllBytes(file);
+    var buffer = ByteBuffer.wrap(bytes);
+    int direct = (int) buffer.getLong(MappedGraphStore.HEADER_BYTES + 16);
+    int first = buffer.getInt(direct + 12);
+    buffer.putInt(direct + 12, buffer.getInt(direct + 16));
+    buffer.putInt(direct + 16, first);
+    rewriteChecksum(bytes);
+    Files.setPosixFilePermissions(
+        file,
+        java.util.Set.of(
+            java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+            java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
+    try (var channel =
+        java.nio.channels.FileChannel.open(file, java.nio.file.StandardOpenOption.WRITE)) {
+      var content = ByteBuffer.wrap(bytes);
+      while (content.hasRemaining()) {
+        channel.write(content);
+      }
+    }
+    assertThrows(IOException.class, graph::verifyBaseline);
   }
 
   @Test

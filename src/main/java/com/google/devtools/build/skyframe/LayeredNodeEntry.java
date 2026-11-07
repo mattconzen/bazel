@@ -13,6 +13,7 @@
 // limitations under the License.
 package com.google.devtools.build.skyframe;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.collect.ImmutableList;
@@ -32,7 +33,65 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
 
   private record Mutable(IncrementalInMemoryNodeEntry entry) implements Storage {}
 
-  private record Frozen(FrozenGraphStore owner, FrozenNodeRecord record) implements Storage {}
+  private sealed interface Frozen extends Storage {
+    SkyValue wrappedValue();
+
+    NodeVersion version();
+
+    DoneDeps directDeps();
+
+    Collection<SkyKey> reverseDeps();
+
+    default int dependencyCount() {
+      return directDeps().dependencyCount();
+    }
+
+    default FrozenNodeRecord record() {
+      return new FrozenNodeRecord(wrappedValue(), version(), directDeps(), reverseDeps());
+    }
+  }
+
+  private record HeapFrozen(FrozenGraphStore owner, FrozenNodeRecord record) implements Frozen {
+    @Override
+    public SkyValue wrappedValue() {
+      return record.wrappedValue();
+    }
+
+    @Override
+    public NodeVersion version() {
+      return record.version();
+    }
+
+    @Override
+    public DoneDeps directDeps() {
+      return record.directDeps();
+    }
+
+    @Override
+    public Collection<SkyKey> reverseDeps() {
+      return record.reverseDeps();
+    }
+  }
+
+  // Keep values per node: a retained dependency cursor must not pin all generation values.
+  private record MappedFrozen(
+      MappedGraphStore owner, int index, SkyValue wrappedValue, NodeVersion version)
+      implements Frozen {
+    @Override
+    public DoneDeps directDeps() {
+      return owner.directDeps(index);
+    }
+
+    @Override
+    public Collection<SkyKey> reverseDeps() {
+      return owner.reverseDeps(index);
+    }
+
+    @Override
+    public int dependencyCount() {
+      return owner.directDependencyCount(index);
+    }
+  }
 
   private final SkyKey key;
   private final LayeredInMemoryGraph.PromotionCounters counters;
@@ -73,7 +132,12 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   }
 
   synchronized Object frozenStorage(FrozenGraphStore store, FrozenNodeRecord record) {
-    return new Frozen(store, record);
+    return new HeapFrozen(store, record);
+  }
+
+  synchronized Object mappedFrozenStorage(
+      MappedGraphStore store, int index, FrozenNodeRecord record) {
+    return new MappedFrozen(store, index, record.wrappedValue(), record.version());
   }
 
   synchronized void installStorage(Object expected, Object replacement) {
@@ -83,6 +147,17 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
 
   synchronized boolean isFrozen() {
     return storage instanceof Frozen;
+  }
+
+  synchronized void trackFreezeRetention(LayeredInMemoryGraph.RetentionAudit audit) {
+    var entry = ((Mutable) storage).entry();
+    audit.track("native_delegate", entry);
+    if (entry.directDeps instanceof Object[] array && array.length > 0) {
+      audit.track("direct_array", array);
+    }
+    if (entry.reverseDeps instanceof Collection<?> collection && collection.size() > 1) {
+      audit.track("reverse_container", collection);
+    }
   }
 
   private IncrementalInMemoryNodeEntry mutable(String reason) {
@@ -140,8 +215,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Nullable
   public synchronized SkyValue getValue() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return ValueWithMetadata.justValue(record.wrappedValue());
+      return ValueWithMetadata.justValue(frozen.wrappedValue());
     }
     return ((Mutable) storage).entry().getValue();
   }
@@ -150,8 +224,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Nullable
   public synchronized SkyValue getValueMaybeWithMetadata() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return record.wrappedValue();
+      return frozen.wrappedValue();
     }
     return ((Mutable) storage).entry().getValueMaybeWithMetadata();
   }
@@ -160,8 +233,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Nullable
   public synchronized SkyValue toValue() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return ValueWithMetadata.justValue(record.wrappedValue());
+      return ValueWithMetadata.justValue(frozen.wrappedValue());
     }
     return ((Mutable) storage).entry().toValue();
   }
@@ -170,8 +242,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Nullable
   public synchronized ErrorInfo getErrorInfo() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return ValueWithMetadata.getMaybeErrorInfo(record.wrappedValue());
+      return ValueWithMetadata.getMaybeErrorInfo(frozen.wrappedValue());
     }
     return ((Mutable) storage).entry().getErrorInfo();
   }
@@ -179,8 +250,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Override
   public synchronized DoneDeps getDoneDeps() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return record.directDeps();
+      return frozen.directDeps();
     }
     return ((Mutable) storage).entry().getDoneDeps();
   }
@@ -188,8 +258,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Override
   public synchronized Iterable<SkyKey> getDirectDeps() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return record.directDeps();
+      return frozen.directDeps();
     }
     return ((Mutable) storage).entry().getDirectDeps();
   }
@@ -197,8 +266,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Override
   public synchronized boolean hasAtLeastOneDep() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return record.directDeps().dependencyCount() != 0;
+      return frozen.dependencyCount() != 0;
     }
     return ((Mutable) storage).entry().hasAtLeastOneDep();
   }
@@ -206,8 +274,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Override
   public synchronized Collection<SkyKey> getReverseDepsForDoneEntry() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return record.reverseDeps();
+      return frozen.reverseDeps();
     }
     return ((Mutable) storage).entry().getReverseDepsForDoneEntry();
   }
@@ -215,8 +282,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Override
   public synchronized Version getVersion() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return record.version().lastChanged();
+      return frozen.version().lastChanged();
     }
     return ((Mutable) storage).entry().getVersion();
   }
@@ -224,8 +290,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Override
   public synchronized Version lastEvaluatedVersion() {
     if (storage instanceof Frozen frozen) {
-      FrozenNodeRecord record = frozen.record();
-      return record.version().lastEvaluated();
+      return frozen.version().lastEvaluated();
     }
     return ((Mutable) storage).entry().lastEvaluatedVersion();
   }
@@ -259,7 +324,7 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
   @Override
   public synchronized @GroupedDeps.Compressed Object getCompressedDirectDepsForDoneEntry() {
     if (storage instanceof Frozen frozen) {
-      return frozen.record().directDeps().materializeForEvaluation().compress();
+      return frozen.directDeps().materializeForEvaluation().compress();
     }
     return ((Mutable) storage).entry().getCompressedDirectDepsForDoneEntry();
   }
@@ -277,12 +342,19 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
 
   @Override
   public synchronized DependencyState addReverseDepAndCheckIfDone(@Nullable SkyKey reverseDep) {
+    if (storage instanceof Frozen && reverseDep == null) {
+      return DependencyState.DONE;
+    }
     return mutable("addReverseDepAndCheckIfDone").addReverseDepAndCheckIfDone(reverseDep);
   }
 
   @Override
   public synchronized DependencyState checkIfDoneForDirtyReverseDep(SkyKey reverseDep)
       throws InterruptedException {
+    checkNotNull(reverseDep, this);
+    if (storage instanceof Frozen) {
+      return DependencyState.DONE;
+    }
     return mutable("checkIfDoneForDirtyReverseDep").checkIfDoneForDirtyReverseDep(reverseDep);
   }
 
@@ -303,6 +375,11 @@ final class LayeredNodeEntry implements InMemoryNodeEntry {
 
   @Override
   public synchronized Collection<SkyKey> getAllReverseDepsForNodeBeingDeleted() {
+    if (storage instanceof Frozen frozen) {
+      // Frozen reverse edges are already consolidated. The collection owns the mapped store and
+      // remains valid after this handle is removed from graph membership.
+      return frozen.reverseDeps();
+    }
     return mutable("getAllReverseDepsForNodeBeingDeleted").getAllReverseDepsForNodeBeingDeleted();
   }
 

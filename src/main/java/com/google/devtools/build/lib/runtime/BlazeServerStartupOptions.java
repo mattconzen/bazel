@@ -591,4 +591,15 @@ public abstract class BlazeServerStartupOptions extends OptionsBase {
           "Use compact object headers in the JVM. Enabled by default for Bazel when "
               + "using the embedded JDK. This can reduce memory usage by 5-7%.")
   public abstract boolean getUseCompactObjectHeaders();
+
+  @Option(
+      name = "experimental_shared_graph_mode",
+      defaultValue = "off",
+      documentationCategory = OptionDocumentationCategory.BAZEL_CLIENT_OPTIONS,
+      effectTags = {OptionEffectTag.BAZEL_INTERNAL_CONFIGURATION},
+      help =
+          "Experimental snapshot-coupled graph storage: off, heap, or mapped. Requires retained"
+              + " incremental analysis state; use shared_graph prepare/reconcile under controller"
+              + " exclusion.")
+  public abstract String getSharedGraphMode();
 }

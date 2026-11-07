@@ -4327,8 +4327,9 @@ java_library(
 
 java_library(
     name = "sequenced_skyframe_executor",
-    srcs = ["SequencedSkyframeExecutor.java"],
+    srcs = ["SequencedSkyframeExecutor.java", "SharedGraphLifecycle.java"],
     deps = [
+        ":action_execution_value",
         ":analysis_progress_receiver",
         ":aspect_key_creator",
         ":bazel_skyframe_executor_constants",
