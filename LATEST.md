@@ -285,7 +285,7 @@ freezes 356 source files, the matched 3 GiB runtime and 24 fresh cohorts before
 collection. The sequential independent matrix is running. Its first four-VM
 native case completes 1,087 operations over 821.126545698 useful seconds, with
 source/work/JVM/guest-OOM/baseline and ordered-accounting replay passing. The
-[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/22e6f68/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
+[early cohort checkpoints](https://github.com/mattconzen/bazel-shared-graph-bench/tree/873e29e/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/independent-trials-02/early-checks)
 reports mean owned charge 12,274,525,568 bytes over the first 600 seconds. Guest/
 host OOM, limit events and swap are zero. This is one native seed, not a paired
 memory-saving or statistical decision. The patched-off cohort also completes
@@ -400,9 +400,17 @@ mean owned charge is 5,636,501,254 bytes and whole-case owned peak is
 safety, baseline integrity and retirement checks pass, with source pins unchanged.
 Mapped is 468,967,613 bytes / 8.32% higher than this same-block control. All three
 four-VM matched-policy point pairs show mapped higher: 5.15%, 6.43% and 8.32% in
-block order. The final statistical report awaits the immutable matrix's remaining
-cohorts and complete-host bounds. Eighteen of 24 cohorts have finished and block
-02 continues with ordinary four-VM native. Remaining controls and complete-host bounds are
+block order. Statistical reporting will follow matrix completion and preserve
+unresolved complete-host bounds. The third ordinary four-VM native baseline also
+completes 1,087 operations over 818.64251884 useful seconds. Its first-600-second
+mean owned charge is 12,477,521,976 bytes and whole-case owned peak is
+14,575,190,016 bytes. Metadata, ordered-accounting, recorded guest/owned-cgroup
+safety, baseline integrity and retirement checks pass, with source pins unchanged.
+In this block, mapped plus policies is 51.07% below ordinary native in owned scope;
+native with the same policies is 54.83% below ordinary native. These point
+comparisons retain the higher mapped mean versus matched-policy native and do
+not qualify whole-host savings. Nineteen of 24 cohorts have finished and block
+02 continues with four-VM patched-off. Remaining controls and complete-host bounds are
 required for the final decision. No idle padding or unequal per-arm work is
 permitted.
 The [policy-screen bundle](https://github.com/mattconzen/bazel-shared-graph-bench/tree/d946bf8/apps/firecracker-bench/pocs/bazel-memory/01-snapshot/benchmark-results/2026-11-05-latest-memory/policy-screen-preflights)
